@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "AHM",
+    "slug": "ahm",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.ahm.mobile",
+      "infoPlist": {
+        "NSUserNotificationUsageDescription": "AHM sends local reminders for tasks due today or tomorrow."
+      }
+    },
+    "android": {
+      "package": "com.ahm.mobile",
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "SCHEDULE_EXACT_ALARM"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#000000"
+      }
+    },
+    "plugins": [
+      "expo-notifications",
+      "expo-asset"
+    ],
+    "extra": {
+      "supabaseUrl": "https://titiljrgqynroxpaznkq.supabase.co",
+      "supabasePublishableKey": "sb_publishable_oYTGDsHQOvboNc48dRfJTQ_0RqwlP7l",
+      "eas": {
+        "projectId": "5a760138-e5e8-4b0d-b23d-09840184d9d2"
+      }
+    }
+  }
+}
