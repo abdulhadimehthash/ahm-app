@@ -1,13 +1,13 @@
 import React from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
+import {
+  KeyboardAvoidingView, Modal, Platform, Pressable,
+  ScrollView, StyleSheet, Text, View
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { sharedStyles } from '../theme/styles';
 
 export function FormModal({
-  visible,
-  title,
-  onClose,
-  children
+  visible, title, onClose, children
 }: {
   visible: boolean;
   title: string;
@@ -15,32 +15,37 @@ export function FormModal({
   children: React.ReactNode;
 }) {
   return (
-    <Modal 
-      visible={visible} 
-      animationType="slide" 
-      presentationStyle="pageSheet" 
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={sharedStyles.screen}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-          style={[sharedStyles.contentContainer, styles.modalInner]}
+      <View style={styles.root}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.inner}
         >
+          {/* Handle */}
+          <View style={styles.handleWrap}>
+            <View style={styles.handle} />
+          </View>
+
+          {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
-            <Pressable 
-              onPress={onClose} 
-              style={({ pressed }) => [
-                styles.close,
-                pressed && { backgroundColor: colors.surfaceLight }
-              ]}
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
             >
-              <Text style={styles.closeText}>×</Text>
+              <Feather name="x" size={18} color={colors.white} />
             </Pressable>
           </View>
-          <ScrollView 
+
+          <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
           >
             {children}
           </ScrollView>
@@ -51,38 +56,49 @@ export function FormModal({
 }
 
 const styles = StyleSheet.create({
-  modalInner: {
-    paddingTop: 10
+  root: {
+    flex: 1,
+    backgroundColor: colors.card,
+    paddingHorizontal: 20,
+  },
+  inner: {
+    flex: 1,
+  },
+  handleWrap: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#333333',
   },
   header: {
-    height: 72,
+    height: 64,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
   title: {
     color: colors.white,
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: -0.5
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
-  close: {
-    width: 44,
-    height: 44,
+  closeBtn: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 10,
     borderColor: colors.border,
-    backgroundColor: colors.surface
-  },
-  closeText: {
-    color: colors.white,
-    fontSize: 28,
-    fontWeight: '300'
+    backgroundColor: colors.surfaceLight,
   },
   scrollContent: {
-    paddingBottom: 40
-  }
+    paddingBottom: 48,
+  },
 });

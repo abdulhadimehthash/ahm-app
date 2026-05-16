@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ActivityIndicator, Alert, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Field } from '../components/Field';
 import { FloatingButton } from '../components/FloatingButton';
@@ -10,10 +10,12 @@ import { formatDate, toIsoDate } from '../lib/date';
 import { cancelTaskNotifications, prepareNotifications, scheduleTaskNotifications } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
 import { RootStackParamList, TaskEntry } from '../lib/types';
+import { useUndo } from '../lib/undoManager';
 import { colors } from '../theme/colors';
 import { sharedStyles } from '../theme/styles';
 
 export function TasksScreen({ navigation }: NativeStackScreenProps<RootStackParamList, 'Tasks'>) {
+  const { showUndo } = useUndo();
   const [tasks, setTasks] = useState<TaskEntry[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [name, setName] = useState('');
@@ -30,18 +32,12 @@ export function TasksScreen({ navigation }: NativeStackScreenProps<RootStackPara
     setLoading(true);
     const { data, error } = await supabase.from('tasks').select('*').order('finish_date', { ascending: true });
     setLoading(false);
-    if (error) {
-      Alert.alert('Unable to load tasks', error.message);
-      return;
-    }
+    if (error) return;
     setTasks(data ?? []);
   }
 
   async function saveTask() {
-    if (!name.trim()) {
-      Alert.alert('Missing details', 'Enter a task name.');
-      return;
-    }
+    if (!name.trim()) return;
     await prepareNotifications();
     const isoDate = toIsoDate(finishDate);
     const notificationIds = await scheduleTaskNotifications(name.trim(), isoDate);
@@ -50,35 +46,28 @@ export function TasksScreen({ navigation }: NativeStackScreenProps<RootStackPara
       finish_date: isoDate,
       ...notificationIds
     });
-    if (error) {
-      Alert.alert('Unable to save task', error.message);
-      return;
-    }
+    if (error) return;
     setName('');
     setFinishDate(new Date());
     setModalVisible(false);
     await loadTasks();
   }
 
-  async function completeTask(task: TaskEntry) {
-    await removeTask(task);
-  }
-
-  async function deleteTask(task: TaskEntry) {
-    Alert.alert('Delete task?', task.name, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => removeTask(task) }
-    ]);
-  }
-
-  async function removeTask(task: TaskEntry) {
-    await cancelTaskNotifications(task);
-    const { error } = await supabase.from('tasks').delete().eq('id', task.id);
-    if (error) {
-      Alert.alert('Unable to remove task', error.message);
-      return;
-    }
-    setTasks((current) => current.filter((item) => item.id !== task.id));
+  function requestDelete(task: TaskEntry, label: string) {
+    // Cancel notifications immediately (can't reschedule on undo without the original params)
+    cancelTaskNotifications(task);
+    setTasks((prev) => prev.filter((t) => t.id !== task.id));
+    showUndo({
+      label,
+      onRestore: async () => {
+        setTasks((prev) =>
+          [...prev, task].sort((a, b) => a.finish_date.localeCompare(b.finish_date))
+        );
+      },
+      onConfirmDelete: async () => {
+        await supabase.from('tasks').delete().eq('id', task.id);
+      },
+    });
   }
 
   function onDateChange(_: DateTimePickerEvent, selectedDate?: Date) {
@@ -109,25 +98,25 @@ export function TasksScreen({ navigation }: NativeStackScreenProps<RootStackPara
                     <Text style={styles.date}>Due {formatDate(item.finish_date)}</Text>
                   </View>
                   <View style={styles.actions}>
-                    <Pressable 
-                      onPress={() => completeTask(item)} 
+                    <Pressable
+                      onPress={() => requestDelete(item, `Completed: ${item.name}`)}
                       style={({ pressed }) => [
-                        styles.actionButton, 
+                        styles.actionButton,
                         styles.completeButton,
                         pressed && { opacity: 0.8, transform: [{ scale: 0.9 }] }
                       ]}
                     >
                       <Text style={styles.actionText}>✓</Text>
                     </Pressable>
-                    <Pressable 
-                      onPress={() => deleteTask(item)} 
+                    <Pressable
+                      onPress={() => requestDelete(item, `Deleted: ${item.name}`)}
                       style={({ pressed }) => [
-                        styles.actionButton, 
+                        styles.actionButton,
                         styles.deleteButton,
                         pressed && { opacity: 0.8, transform: [{ scale: 0.9 }] }
                       ]}
                     >
-                      <Text style={styles.actionText}>×</Text>
+                      <Text style={[styles.actionText, styles.deleteActionText]}>×</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -137,7 +126,7 @@ export function TasksScreen({ navigation }: NativeStackScreenProps<RootStackPara
         )}
       </View>
       <FloatingButton onPress={() => setModalVisible(true)} />
-      
+
       <FormModal visible={modalVisible} title="Add Task" onClose={() => setModalVisible(false)}>
         <Field label="Task Name" value={name} onChangeText={setName} />
         <Text style={sharedStyles.label}>Finish Date</Text>
@@ -154,12 +143,9 @@ export function TasksScreen({ navigation }: NativeStackScreenProps<RootStackPara
             textColor={colors.white}
           />
         )}
-        <Pressable 
-          onPress={saveTask} 
-          style={({ pressed }) => [
-            sharedStyles.primaryButton,
-            pressed && { opacity: 0.8 }
-          ]}
+        <Pressable
+          onPress={saveTask}
+          style={({ pressed }) => [sharedStyles.primaryButton, pressed && { opacity: 0.8 }]}
         >
           <Text style={sharedStyles.primaryButtonText}>Create Task</Text>
         </Pressable>
@@ -169,80 +155,22 @@ export function TasksScreen({ navigation }: NativeStackScreenProps<RootStackPara
 }
 
 const styles = StyleSheet.create({
-  taskTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16
-  },
-  taskTextWrap: {
-    flex: 1
-  },
-  taskName: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 6
-  },
-  date: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '600'
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 10
-  },
-  actionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  completeButton: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.white
-  },
-  deleteButton: {
-    backgroundColor: colors.surfaceLight,
-    borderWidth: 1,
-    borderColor: colors.border
-  },
-  actionText: {
-    color: colors.black,
-    fontSize: 20,
-    fontWeight: '700'
-  },
-  deleteActionText: {
-    color: colors.white
-  },
-  listContent: {
-    paddingBottom: 120
-  },
-  loader: {
-    flex: 1,
-    justifyContent: 'center'
-  },
-  empty: {
-    color: colors.muted,
-    textAlign: 'center',
-    marginTop: 80,
-    fontSize: 15
-  },
+  taskTop: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  taskTextWrap: { flex: 1 },
+  taskName: { color: colors.white, fontSize: 18, fontWeight: '700', marginBottom: 6 },
+  date: { color: colors.muted, fontSize: 13, fontWeight: '600' },
+  actions: { flexDirection: 'row', gap: 10 },
+  actionButton: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  completeButton: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.white },
+  deleteButton: { backgroundColor: colors.surfaceLight, borderWidth: 1, borderColor: colors.border },
+  actionText: { color: colors.black, fontSize: 20, fontWeight: '700' },
+  deleteActionText: { color: colors.white },
+  listContent: { paddingBottom: 120 },
+  loader: { flex: 1, justifyContent: 'center' },
+  empty: { color: colors.muted, textAlign: 'center', marginTop: 80, fontSize: 15 },
   dateButton: {
-    minHeight: 56,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    marginBottom: 24
+    minHeight: 56, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 16, justifyContent: 'center', backgroundColor: colors.bg, marginBottom: 24,
   },
-  dateButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600'
-  }
+  dateButtonText: { color: colors.white, fontSize: 16, fontWeight: '600' },
 });

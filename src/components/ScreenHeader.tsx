@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../lib/types';
 import { colors } from '../theme/colors';
@@ -7,7 +8,7 @@ import { colors } from '../theme/colors';
 export function ScreenHeader({
   title,
   navigation,
-  action
+  action,
 }: {
   title: string;
   navigation: NativeStackNavigationProp<RootStackParamList, any>;
@@ -15,14 +16,11 @@ export function ScreenHeader({
 }) {
   return (
     <View style={styles.wrap}>
-      <Pressable 
-        onPress={() => navigation.goBack()} 
-        style={({ pressed }) => [
-          styles.back,
-          pressed && { backgroundColor: colors.surfaceLight }
-        ]}
+      <Pressable
+        onPress={() => navigation.goBack()}
+        style={({ pressed }) => [styles.back, pressed && { opacity: 0.6 }]}
       >
-        <Text style={styles.backText}>←</Text>
+        <Feather name="arrow-left" size={20} color={colors.white} />
       </Pressable>
       <Text style={styles.title} numberOfLines={1}>{title}</Text>
       <View style={styles.action}>{action}</View>
@@ -32,40 +30,33 @@ export function ScreenHeader({
 
 const styles = StyleSheet.create({
   wrap: {
-    height: 64,
+    height: 60,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   back: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surface
-  },
-  backText: {
-    color: colors.white,
-    fontSize: 20,
-    fontWeight: '600'
+    backgroundColor: colors.card,
   },
   title: {
     color: colors.white,
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.3,
     position: 'absolute',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    zIndex: -1
+    left: 52,
+    right: 52,
   },
   action: {
-    minWidth: 48,
-    alignItems: 'flex-end'
-  }
+    minWidth: 40,
+    alignItems: 'flex-end',
+  },
 });

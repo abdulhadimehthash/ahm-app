@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View, Platform } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { Picker } from '@react-native-picker/picker';
 import { Field } from '../components/Field';
 import { FloatingButton } from '../components/FloatingButton';
@@ -8,12 +9,14 @@ import { FormModal } from '../components/FormModal';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { supabase } from '../lib/supabase';
 import { PasswordCategory, PasswordEntry, RootStackParamList } from '../lib/types';
+import { useUndo } from '../lib/undoManager';
 import { colors } from '../theme/colors';
 import { sharedStyles } from '../theme/styles';
 
 const categories: PasswordCategory[] = ['Personal', 'Client', 'Others'];
 
 export function PasswordsScreen({ navigation }: NativeStackScreenProps<RootStackParamList, 'Passwords'>) {
+  const { showUndo } = useUndo();
   const [entries, setEntries] = useState<PasswordEntry[]>([]);
   const [filter, setFilter] = useState<PasswordCategory>('Personal');
   const [modalVisible, setModalVisible] = useState(false);
@@ -90,16 +93,16 @@ export function PasswordsScreen({ navigation }: NativeStackScreenProps<RootStack
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={<Text style={styles.empty}>No saved passwords.</Text>}
             renderItem={({ item }) => (
-              <Pressable 
+              <Pressable
                 onLongPress={() => {
-                  Alert.alert('Delete Password', `Are you sure you want to delete the entry for ${item.username}?`, [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: async () => {
-                      const { error } = await supabase.from('password_entries').delete().eq('id', item.id);
-                      if (error) Alert.alert('Error', error.message);
-                      else await loadEntries();
-                    }}
-                  ]);
+                  setEntries((prev) => prev.filter((e) => e.id !== item.id));
+                  showUndo({
+                    label: `Deleted: ${item.username}`,
+                    onRestore: async () => setEntries((prev) => [item, ...prev]),
+                    onConfirmDelete: async () => {
+                      await supabase.from('password_entries').delete().eq('id', item.id);
+                    },
+                  });
                 }}
                 style={({ pressed }) => [
                   sharedStyles.card,
@@ -112,15 +115,29 @@ export function PasswordsScreen({ navigation }: NativeStackScreenProps<RootStack
                 <Text style={styles.name}>{item.username}</Text>
                 <View style={styles.passwordRow}>
                   <Text style={styles.passwordText}>{revealed[item.id] ? item.password_value : '••••••••'}</Text>
-                  <Pressable 
-                    onPress={() => setRevealed((value) => ({ ...value, [item.id]: !value[item.id] }))}
-                    style={({ pressed }) => [
-                      styles.revealButton,
-                      pressed && { opacity: 0.7 }
-                    ]}
-                  >
-                    <Text style={styles.reveal}>{revealed[item.id] ? 'Hide' : 'Reveal'}</Text>
-                  </Pressable>
+                  <View style={styles.rowActions}>
+                    <Pressable 
+                      onPress={() => setRevealed((value) => ({ ...value, [item.id]: !value[item.id] }))}
+                      style={({ pressed }) => [
+                        styles.revealButton,
+                        pressed && { opacity: 0.7 }
+                      ]}
+                    >
+                      <Text style={styles.reveal}>{revealed[item.id] ? 'Hide' : 'Reveal'}</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={async () => {
+                        await Clipboard.setStringAsync(item.password_value);
+                        Alert.alert('Copied!', 'Password copied to clipboard.');
+                      }}
+                      style={({ pressed }) => [
+                        styles.copyButton,
+                        pressed && { opacity: 0.7 }
+                      ]}
+                    >
+                      <Text style={styles.copyText}>Copy</Text>
+                    </Pressable>
+                  </View>
                 </View>
               </Pressable>
             )}
@@ -182,7 +199,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface
+    backgroundColor: colors.bg
   },
   activeFilter: {
     backgroundColor: colors.white,
@@ -228,9 +245,27 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 1
   },
+  rowActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
   revealButton: {
     paddingVertical: 4,
     paddingHorizontal: 8
+  },
+  copyButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)'
+  },
+  copyText: {
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 12
   },
   reveal: {
     color: colors.white,
@@ -249,11 +284,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 20,
     overflow: 'hidden',
-    backgroundColor: colors.surface
+    backgroundColor: colors.bg
   },
   picker: {
     color: colors.white,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.bg,
     height: 56
   },
   toggle: {

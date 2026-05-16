@@ -1,20 +1,35 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform } from 'react-native';
-import { AhmLogo } from '../components/AhmLogo';
+import {
+  KeyboardAvoidingView, Platform, Pressable,
+  StyleSheet, Text, TextInput, View
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from '../lib/types';
 import { colors } from '../theme/colors';
-import { sharedStyles } from '../theme/styles';
 
-const accessPin = '982010';
+const DEFAULT_PIN = '982010';
+const PIN_KEY = 'ahm_custom_pin';
 
 export function LockScreen({ navigation }: NativeStackScreenProps<RootStackParamList, 'Lock'>) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [accessPin, setAccessPin] = useState(DEFAULT_PIN);
 
-  function unlock() {
+  useEffect(() => {
+    AsyncStorage.getItem(PIN_KEY).then((stored) => {
+      if (stored) setAccessPin(stored);
+    });
+  }, []);
+
+  async function saveSession() {
+    await AsyncStorage.setItem('ahm_unlock_session', Date.now().toString());
+  }
+
+  async function unlock() {
     if (pin === accessPin) {
       setError('');
+      await saveSession();
       navigation.replace('Home');
       return;
     }
@@ -23,48 +38,49 @@ export function LockScreen({ navigation }: NativeStackScreenProps<RootStackParam
   }
 
   return (
-    <View style={sharedStyles.screen}>
-      <KeyboardAvoidingView 
+    <View style={styles.screen}>
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[sharedStyles.contentContainer, styles.container]}
+        style={styles.inner}
       >
-        <View style={styles.logoContainer}>
-          <AhmLogo />
+        {/* Logo */}
+        <View style={styles.logoWrap}>
+          <Text style={styles.logo}>AHM</Text>
+          <Text style={styles.subtitle}>Personal Manager</Text>
         </View>
-        
+
+        {/* Form */}
         <View style={styles.form}>
-          <Text style={styles.heading}>Enter PIN</Text>
+          <Text style={styles.label}>PIN</Text>
           <TextInput
             value={pin}
-            onChangeText={(value) => {
+            onChangeText={async (value) => {
               setError('');
-              const cleaned = value.replace(/\D/g, '').slice(0, 6);
+              const cleaned = value.replace(/\D/g, '').slice(0, 8);
               setPin(cleaned);
-              if (cleaned.length === 6) {
-                // Auto-submit if 6 digits are entered
-                if (cleaned === accessPin) {
-                  navigation.replace('Home');
-                }
+              if (cleaned.length >= 4 && cleaned === accessPin) {
+                await saveSession();
+                navigation.replace('Home');
+              } else if (cleaned.length >= 4 && cleaned.length === accessPin.length && cleaned !== accessPin) {
+                setError('Incorrect PIN');
+                setPin('');
               }
             }}
             secureTextEntry
             keyboardType="number-pad"
-            maxLength={6}
+            maxLength={8}
             placeholder="••••••"
             placeholderTextColor={colors.muted}
             style={[styles.pinInput, !!error && styles.inputError]}
             autoFocus
           />
           {!!error && <Text style={styles.error}>{error}</Text>}
-          
-          <Pressable 
-            onPress={unlock} 
-            style={({ pressed }) => [
-              sharedStyles.primaryButton,
-              pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
-            ]}
+
+          <Pressable
+            onPress={unlock}
+            style={({ pressed }) => [styles.unlockBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
           >
-            <Text style={sharedStyles.primaryButtonText}>Unlock App</Text>
+            <Text style={styles.unlockBtnText}>Unlock</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -73,46 +89,80 @@ export function LockScreen({ navigation }: NativeStackScreenProps<RootStackParam
 }
 
 const styles = StyleSheet.create({
-  container: {
-    justifyContent: 'center',
-    paddingBottom: 40
+  screen: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    paddingHorizontal: 24,
   },
-  logoContainer: {
+  inner: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingBottom: 40,
+  },
+  logoWrap: {
     alignItems: 'center',
-    marginBottom: 60
+    marginBottom: 64,
+  },
+  logo: {
+    color: colors.white,
+    fontSize: 36,
+    fontWeight: '800',
+    letterSpacing: 8,
+    marginBottom: 8,
+  },
+  subtitle: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '400',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
   form: {
-    width: '100%'
+    width: '100%',
   },
-  heading: {
-    color: colors.white,
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 24,
-    letterSpacing: 0.5
+  label: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '400',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginBottom: 12,
   },
   pinInput: {
-    height: 72,
-    borderRadius: 20,
-    borderWidth: 1.5,
+    height: 64,
+    borderRadius: 14,
+    borderWidth: 1,
     borderColor: colors.border,
     color: colors.white,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
     textAlign: 'center',
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
-    marginBottom: 16,
-    letterSpacing: 8
+    marginBottom: 12,
+    letterSpacing: 10,
   },
   inputError: {
-    borderColor: colors.red
+    borderColor: colors.red,
   },
   error: {
     color: colors.red,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '400',
     textAlign: 'center',
-    marginBottom: 20
-  }
+    marginBottom: 20,
+  },
+  unlockBtn: {
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  unlockBtnText: {
+    color: colors.black,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
 });

@@ -18,17 +18,56 @@
     },
     "android": {
       "package": "com.ahm.mobile",
+      "minSdkVersion": 21,
       "permissions": [
-        "POST_NOTIFICATIONS",
-        "SCHEDULE_EXACT_ALARM"
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "READ_CONTACTS"
       ],
       "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#000000"
       }
     },
     "plugins": [
       "expo-notifications",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "AHM needs access to your photos to save documents.",
+          "cameraPermission": "AHM needs access to your camera to take document photos."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "AHM needs access to your contacts to import them as a backup."
+        }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "TaskWidget",
+              "label": "AHM Tasks",
+              "description": "Shows your most urgent task",
+              "minWidth": "250dp",
+              "minHeight": "40dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 1,
+              "updatePeriodMillis": 1800000,
+              "previewImage": "./assets/icon.png"
+            }
+          ]
+        }
+      ],
+      "./plugins/withAbiFilters",
+      "expo-font"
     ],
     "extra": {
       "supabaseUrl": "https://titiljrgqynroxpaznkq.supabase.co",

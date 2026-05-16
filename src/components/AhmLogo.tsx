@@ -1,39 +1,25 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { colors } from '../theme/colors';
 
+// Simple text logo — no border box
 export function AhmLogo({ compact = false }: { compact?: boolean }) {
   return (
-    <View style={[styles.wrap, compact && styles.compactWrap]}>
-      <Text style={[styles.text, compact && styles.compactText]}>AHM</Text>
-    </View>
+    <Text style={compact ? styles.compact : styles.logo}>AHM</Text>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    alignSelf: 'center',
-    borderWidth: 2,
-    borderColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 0, // Keep it sharp for minimal look
-    marginBottom: 32
-  },
-  compactWrap: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginBottom: 0
-  },
-  text: {
+  logo: {
     color: colors.white,
-    fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: 2
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: 6,
   },
-  compactText: {
-    fontSize: 18,
-    letterSpacing: 1
-  }
+  compact: {
+    color: colors.white,
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: 4,
+  },
 });

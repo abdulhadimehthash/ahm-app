@@ -1,17 +1,15 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, Platform } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
-export function FloatingButton({ onPress, label = '+' }: { onPress: () => void; label?: string }) {
+export function FloatingButton({ onPress }: { onPress: () => void }) {
   return (
-    <Pressable 
-      onPress={onPress} 
-      style={({ pressed }) => [
-        styles.button,
-        pressed && styles.pressed
-      ]}
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.button, pressed && styles.pressed]}
     >
-      <Text style={styles.text}>{label}</Text>
+      <Feather name="plus" size={26} color={colors.black} />
     </Pressable>
   );
 }
@@ -21,29 +19,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 24,
     bottom: 32,
-    width: 64,
-    height: 64,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    // Premium shadow
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
     elevation: 8,
-    // Fix for web centering
-    zIndex: 100
+    zIndex: 100,
   },
   pressed: {
-    transform: [{ scale: 0.92 }],
-    opacity: 0.9
+    transform: [{ scale: 0.93 }],
+    opacity: 0.9,
   },
-  text: {
-    color: colors.black,
-    fontSize: 32,
-    lineHeight: 34,
-    fontWeight: '600'
-  }
 });

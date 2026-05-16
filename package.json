@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "build:apk": "eas build -p android --profile preview",
     "setup:db": "node scripts/setup-database.mjs",
-    "postinstall": "node scripts/setup-database.mjs --skip-on-missing-env"
+    "setup:proposals": "node scripts/setup-proposals.mjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",
@@ -23,10 +23,16 @@
     "expo": "~52.0.47",
     "expo-asset": "~11.0.5",
     "expo-clipboard": "~7.0.1",
+    "expo-file-system": "~18.0.12",
+    "expo-font": "~13.0.4",
+    "expo-image-picker": "~16.0.6",
     "expo-notifications": "~0.29.14",
+    "expo-contacts": "~14.0.1",
+    "expo-sensors": "~14.0.1",
+    "expo-sharing": "~13.0.1",
     "expo-status-bar": "~2.0.1",
-    "pg": "^8.13.1",
     "react": "18.3.1",
+    "react-native-android-widget": "^0.14.0",
     "react-dom": "18.3.1",
     "react-native": "0.76.9",
     "react-native-safe-area-context": "4.12.0",
@@ -36,6 +42,7 @@
   "devDependencies": {
     "@babel/core": "^7.26.0",
     "@types/react": "~18.3.12",
+    "pg": "^8.20.0",
     "typescript": "^5.3.3"
   }
 }
