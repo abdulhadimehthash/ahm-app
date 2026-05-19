@@ -42,9 +42,9 @@ export function UndoToast() {
       <View style={styles.inner}>
         <View style={styles.left}>
           <Text style={styles.label} numberOfLines={1}>
-            {activeLabel ?? 'Item deleted'}
+            {activeLabel}
           </Text>
-          <Text style={styles.sub}>Shake or tap Undo · {secondsLeft}s</Text>
+          {isActive && <Text style={styles.sub}>Shake or tap Undo · {secondsLeft}s</Text>}
         </View>
         <Pressable
           onPress={restore}

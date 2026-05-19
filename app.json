@@ -39,9 +39,10 @@
         "expo-build-properties",
         {
           "android": {
-            "minSdkVersion": 21,
+            "minSdkVersion": 24,
             "compileSdkVersion": 35,
-            "targetSdkVersion": 35
+            "targetSdkVersion": 35,
+            "kotlinVersion": "1.9.24"
           }
         }
       ],
@@ -59,34 +60,17 @@
           "contactsPermission": "AHM needs access to your contacts to import them as a backup."
         }
       ],
-      [
-        "react-native-android-widget",
-        {
-          "widgets": [
-            {
-              "name": "TaskWidget",
-              "label": "AHM Tasks",
-              "description": "Shows your most urgent task",
-              "minWidth": "250dp",
-              "minHeight": "40dp",
-              "targetCellWidth": 4,
-              "targetCellHeight": 1,
-              "updatePeriodMillis": 1800000,
-              "previewImage": "./assets/icon.png"
-            }
-          ]
-        }
-      ],
-      "./plugins/withAbiFilters",
+
+
       "expo-font"
     ],
     "extra": {
       "supabaseUrl": "https://titiljrgqynroxpaznkq.supabase.co",
       "supabasePublishableKey": "sb_publishable_oYTGDsHQOvboNc48dRfJTQ_0RqwlP7l",
       "eas": {
-        "projectId": "8de0ab64-a4b4-4820-8952-d126b9d69c8d"
+        "projectId": "885a4469-3fe9-4a64-bfec-5f7bf549ab50"
       }
     },
-    "owner": "nearbi"
+    "owner": "hadimehthash"
   }
 }
