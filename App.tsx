@@ -159,7 +159,7 @@ export default function App() {
           </Stack.Navigator>
         </NavigationContainer>
         {/* Global undo toast — renders above all screens */}
-        <UndoToast />
+        {/* Removed UndoToast */}
       </View>
     </UndoProvider>
   );

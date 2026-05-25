@@ -198,7 +198,11 @@ export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackP
       .select('*')
       .order('name', { ascending: true });
     setLoading(false);
-    if (!error) setContacts(data ?? []);
+    if (error) {
+      Alert.alert('Load failed', error.message);
+    } else {
+      setContacts(data ?? []);
+    }
   }
 
   async function saveContact() {
@@ -206,13 +210,17 @@ export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackP
       Alert.alert('Missing details', 'Name and phone are required.');
       return;
     }
-    await supabase.from('contacts').insert({
+    const { error } = await supabase.from('contacts').insert({
       name: name.trim(),
       phone: phone.trim(),
       email: email.trim() || null,
       category,
       notes: notes.trim() || null,
     });
+    if (error) {
+      Alert.alert('Save failed', error.message);
+      return;
+    }
     resetForm();
     setModalVisible(false);
     await loadContacts();

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   FlatList,
   PanResponder,
@@ -16,6 +17,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
+import { Feather } from '@expo/vector-icons';
 import { FloatingButton } from '../components/FloatingButton';
 import { FormModal } from '../components/FormModal';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -27,6 +29,13 @@ import { sharedStyles } from '../theme/styles';
 
 const CATEGORIES: CopyVaultCategory[] = ['Personal', 'Work', 'KSF', 'Client'];
 const DEFAULTS_KEY = 'copy_vault_defaults_v1';
+
+const CAT_INFO: Record<CopyVaultCategory, { color: string; icon: string }> = {
+  Personal: { color: '#60A5FA', icon: 'user' },
+  Work: { color: '#A78BFA', icon: 'briefcase' },
+  KSF: { color: '#FB923C', icon: 'zap' },
+  Client: { color: '#F59E0B', icon: 'dollar-sign' },
+};
 
 const DEFAULT_ITEMS = [
   { label: 'My Email',    content: '', category: 'Personal' as CopyVaultCategory },
@@ -83,15 +92,8 @@ export function CopyVaultScreen({ navigation }: NativeStackScreenProps<RootStack
   const toastOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    seedDefaultsIfNeeded().then(loadItems);
+    loadItems();
   }, []);
-
-  async function seedDefaultsIfNeeded() {
-    const done = await AsyncStorage.getItem(DEFAULTS_KEY);
-    if (done) return;
-    await supabase.from('copy_vault').insert(DEFAULT_ITEMS);
-    await AsyncStorage.setItem(DEFAULTS_KEY, '1');
-  }
 
   async function loadItems() {
     setLoading(true);
@@ -99,17 +101,52 @@ export function CopyVaultScreen({ navigation }: NativeStackScreenProps<RootStack
       .from('copy_vault')
       .select('*')
       .order('created_at', { ascending: false });
-    setLoading(false);
-    if (!error) setItems(data ?? []);
+
+    if (error) {
+      setLoading(false);
+      Alert.alert('Load failed', error.message);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      setItems(data);
+      setLoading(false);
+    } else {
+      // It's empty. Let's see if we should seed default items
+      const done = await AsyncStorage.getItem(DEFAULTS_KEY);
+      if (!done) {
+        const { error: seedError } = await supabase.from('copy_vault').insert(DEFAULT_ITEMS);
+        await AsyncStorage.setItem(DEFAULTS_KEY, '1');
+        if (!seedError) {
+          const reload = await supabase
+            .from('copy_vault')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (reload.data) setItems(reload.data);
+        } else {
+          Alert.alert('Seeding failed', seedError.message);
+        }
+      } else {
+        setItems([]);
+      }
+      setLoading(false);
+    }
   }
 
   async function saveItem() {
-    if (!label.trim()) return;
-    await supabase.from('copy_vault').insert({
+    if (!label.trim()) {
+      Alert.alert('Missing details', 'Label is required.');
+      return;
+    }
+    const { error } = await supabase.from('copy_vault').insert({
       label: label.trim(),
       content: content.trim(),
       category,
     });
+    if (error) {
+      Alert.alert('Save failed', error.message);
+      return;
+    }
     setLabel(''); setContent(''); setCategory('Personal');
     setModalVisible(false);
     await loadItems();
@@ -180,24 +217,34 @@ export function CopyVaultScreen({ navigation }: NativeStackScreenProps<RootStack
                 <Text style={styles.emptySub}>Tap + to add your first snippet</Text>
               </View>
             }
-            renderItem={({ item }) => (
-              <SwipeRow onDelete={() => handleDelete(item)}>
-                <Pressable
-                  onPress={() => handleCopy(item)}
-                  style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
-                >
-                  <View style={styles.cardTop}>
-                    <View style={styles.catTag}>
-                      <Text style={styles.catTagText}>{item.category}</Text>
+            renderItem={({ item }) => {
+              const cat = item.category as CopyVaultCategory;
+              const info = CAT_INFO[cat] || { color: '#60A5FA', icon: 'clipboard' };
+              return (
+                <SwipeRow onDelete={() => handleDelete(item)}>
+                  <Pressable
+                    onPress={() => handleCopy(item)}
+                    style={({ pressed }) => [
+                      styles.vaultButton,
+                      pressed && styles.vaultButtonPressed
+                    ]}
+                  >
+                    <View style={[styles.avatar, { backgroundColor: info.color + '18', borderColor: info.color + '33' }]}>
+                      <Feather name={info.icon as any} size={16} color={info.color} />
                     </View>
-                  </View>
-                  <Text style={styles.cardLabel}>{item.label}</Text>
-                  <Text style={styles.cardContent} numberOfLines={2}>
-                    {item.content || 'Tap to copy · (empty — edit to add content)'}
-                  </Text>
-                </Pressable>
-              </SwipeRow>
-            )}
+                    <View style={styles.buttonTextContainer}>
+                      <Text style={styles.buttonLabel}>{item.label}</Text>
+                      <Text style={styles.buttonContent} numberOfLines={1}>
+                        {item.content || 'Empty · Tap to edit'}
+                      </Text>
+                    </View>
+                    <View style={styles.copyIndicator}>
+                      <Feather name="copy" size={14} color={colors.muted} />
+                    </View>
+                  </Pressable>
+                </SwipeRow>
+              );
+            }}
           />
         )}
       </View>
@@ -277,30 +324,54 @@ const styles = StyleSheet.create({
   filterBtnActive: { backgroundColor: colors.white, borderColor: colors.white },
   filterText: { color: colors.muted, fontSize: 13, fontWeight: '700' },
   filterTextActive: { color: colors.black },
-  card: {
+  vaultButton: {
     backgroundColor: colors.card,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 68,
   },
-  cardTop: { flexDirection: 'row', marginBottom: 8 },
-  catTag: {
+  vaultButtonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.985 }],
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonTextContainer: {
+    flex: 1,
+    paddingLeft: 12,
+    paddingRight: 8,
+  },
+  buttonLabel: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 3,
+  },
+  buttonContent: {
+    color: colors.muted,
+    fontSize: 12,
+  },
+  copyIndicator: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: colors.surfaceLight,
-    borderRadius: 6,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  catTagText: { color: colors.muted, fontSize: 11, fontWeight: '700' },
-  cardLabel: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  cardContent: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   delBtn: {
     position: 'absolute', right: 0, top: 0, bottom: 0, width: 80,
     backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center', borderRadius: 16,

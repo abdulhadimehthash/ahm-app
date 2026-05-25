@@ -39,31 +39,9 @@ export function UndoProvider({ children }: { children: React.ReactNode }) {
   }, [clearTimers]);
 
   const showUndo = useCallback((item: UndoItem) => {
-    // Confirm-delete any existing pending item before queuing the new one
-    if (pendingRef.current) {
-      pendingRef.current.onConfirmDelete();
-    }
-    clearTimers();
-
-    pendingRef.current = item;
-    setActiveLabel(item.label);
-    setSecondsLeft(10);
-
-    let s = 10;
-    countdownRef.current = setInterval(() => {
-      s -= 1;
-      setSecondsLeft(s);
-    }, 1000);
-
-    deleteTimerRef.current = setTimeout(async () => {
-      clearTimers();
-      const p = pendingRef.current;
-      pendingRef.current = null;
-      setActiveLabel(null);
-      setSecondsLeft(10);
-      if (p) await p.onConfirmDelete();
-    }, 10_000);
-  }, [clearTimers]);
+    // Execute immediately without timers or state changes
+    item.onConfirmDelete();
+  }, []);
 
   return (
     <UndoContext.Provider value={{ showUndo, restore, activeLabel, secondsLeft }}>
