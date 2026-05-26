@@ -113,6 +113,18 @@ export type ContactEntry = {
   created_at: string;
 };
 
+export type DayPlan = {
+  id: string;
+  created_at: string;
+  title: string;
+  plan_date: string;
+  plan_time: string;
+  details: string | null;
+  notification_id: string | null;
+  notification_early_id: string | null;
+  plan_type: string;
+};
+
 export type RootStackParamList = {
   Lock: undefined;
   Home: undefined;
@@ -133,4 +145,6 @@ export type RootStackParamList = {
   Search: undefined;
   CopyVault: undefined;
   Contacts: undefined;
+  Day: undefined;
+  DayDetail: { planId: string };
 };

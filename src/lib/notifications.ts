@@ -357,3 +357,85 @@ async function scheduleIfFuture(input: {
     trigger: { date: input.date } as Notifications.NotificationTriggerInput
   });
 }
+
+// ── Day Plans (IST Time Zone UTC+5:30) ──────────────────────────────────────
+function parseIstDateTime(plan_date: string, plan_time: string): Date {
+  // plan_date: YYYY-MM-DD
+  // plan_time: hh:mm AM/PM (e.g., "09:00 AM", "12:15 PM")
+  const [year, monthStr, day] = plan_date.split('-').map(Number);
+  const month = monthStr - 1; // 0-indexed month
+
+  const match = plan_time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) {
+    throw new Error('Invalid time format. Expected "hh:mm AM/PM"');
+  }
+
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const ampm = match[3].toUpperCase();
+
+  if (ampm === 'PM' && hours < 12) {
+    hours += 12;
+  } else if (ampm === 'AM' && hours === 12) {
+    hours = 0;
+  }
+
+  const utcTime = Date.UTC(year, month, day, hours, minutes, 0, 0);
+  const istOffsetMs = 5.5 * 60 * 60 * 1000;
+  return new Date(utcTime - istOffsetMs);
+}
+
+export async function scheduleDayPlanNotifications(plan: {
+  title: string;
+  plan_date: string;
+  plan_time: string;
+}) {
+  try {
+    const targetDate = parseIstDateTime(plan.plan_date, plan.plan_time);
+    const now = new Date();
+
+    let notification_id: string | null = null;
+    let notification_early_id: string | null = null;
+
+    // 1. Exact-time notification
+    if (targetDate > now) {
+      notification_id = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '⏰ Plan Now',
+          body: `Now: ${plan.title}`,
+          sound: true,
+          data: { screen: 'Day' }
+        },
+        trigger: { date: targetDate } as Notifications.NotificationTriggerInput
+      });
+    }
+
+    // 2. 10-minute early notification
+    const earlyDate = new Date(targetDate.getTime() - 10 * 60 * 1000);
+    if (earlyDate > now) {
+      notification_early_id = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '⏰ Upcoming Plan',
+          body: `In 10 mins: ${plan.title}`,
+          sound: true,
+          data: { screen: 'Day' }
+        },
+        trigger: { date: earlyDate } as Notifications.NotificationTriggerInput
+      });
+    }
+
+    return { notification_id, notification_early_id };
+  } catch (error) {
+    console.error('Failed to schedule day plan notifications:', error);
+    return { notification_id: null, notification_early_id: null };
+  }
+}
+
+export async function cancelDayPlanNotifications(plan: {
+  notification_id: string | null;
+  notification_early_id: string | null;
+}) {
+  const ids = [plan.notification_id, plan.notification_early_id].filter(Boolean) as string[];
+  await Promise.all(ids.map((id) => Notifications.cancelScheduledNotificationAsync(id)));
+}
+

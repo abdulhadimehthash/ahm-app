@@ -35,6 +35,8 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { CopyVaultScreen } from './src/screens/CopyVaultScreen';
 import { ContactsScreen } from './src/screens/ContactsScreen';
+import { DayScreen } from './src/screens/DayScreen';
+import { DayDetailScreen } from './src/screens/DayDetailScreen';
 import { colors } from './src/theme/colors';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -109,7 +111,7 @@ export default function App() {
     // Navigate after a brief delay to ensure the navigator is ready
     setTimeout(() => {
       try {
-        navigationRef.current?.navigate(screen);
+        navigationRef.current?.navigate(screen as any);
       } catch {
         // Navigation failed — app may still be loading
       }
@@ -156,6 +158,8 @@ export default function App() {
             <Stack.Screen name="Search"    component={SearchScreen} />
             <Stack.Screen name="CopyVault" component={CopyVaultScreen} />
             <Stack.Screen name="Contacts"  component={ContactsScreen} />
+            <Stack.Screen name="Day"       component={DayScreen} />
+            <Stack.Screen name="DayDetail" component={DayDetailScreen} />
           </Stack.Navigator>
         </NavigationContainer>
         {/* Global undo toast — renders above all screens */}
