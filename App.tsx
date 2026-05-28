@@ -8,12 +8,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { RootStackParamList } from './src/lib/types';
 import {
-  prepareNotifications,
-  scheduleRecurringNotifications,
-  scheduleDynamicMorningNotification,
-  scheduleDynamic3pmNotification,
-  scheduleStreakWarningNotification,
+  requestNotificationPermissions,
+  scheduleDailyMorning,
+  scheduleDailyAfternoon,
+  scheduleNotification,
+  scheduleEarlyNotification,
+  cancelNotification,
+  parsePlanDateTime,
 } from './src/lib/notifications';
+import { supabase } from './src/lib/supabase';
+import { Alert } from 'react-native';
 import { UndoProvider } from './src/lib/undoManager';
 import { UndoToast } from './src/components/UndoToast';
 import { LockScreen } from './src/screens/LockScreen';
@@ -70,26 +74,189 @@ export default function App() {
   }, []);
 
   async function initApp() {
-    await prepareNotifications();
-    await scheduleRecurringNotifications();
-
-    // Dynamic notifications — reschedule with fresh task count on every open
+    const granted = await requestNotificationPermissions();
     try {
-      await scheduleDynamicMorningNotification();
-      await scheduleDynamic3pmNotification();
-    } catch {
-      // Supabase may not be ready; non-critical
+      await AsyncStorage.setItem('ahm_notifications_permission', granted ? 'granted' : 'denied');
+    } catch (e) {
+      // Non-critical
+    }
+
+    if (!granted) {
+      Alert.alert(
+        'Notifications Disabled',
+        'AHM needs notification permissions to send you timely reminders for tasks, day plans, and birthdays. You can enable them anytime in system settings.',
+        [{ text: 'OK' }]
+      );
+    } else {
+      await scheduleDailyMorning();
+      await scheduleDailyAfternoon();
+    }
+
+    // Reschedule all active notifications on app start
+    try {
+      await rescheduleAll();
+    } catch (e) {
+      console.error('Failed to reschedule notifications:', e);
     }
 
     // Streak check
     try {
       const lastOpen = await AsyncStorage.getItem(LAST_OPEN_KEY);
       if (lastOpen && Date.now() - parseInt(lastOpen, 10) > ONE_DAY_MS) {
-        await scheduleStreakWarningNotification();
+        // Streak check - non-critical
       }
       await AsyncStorage.setItem(LAST_OPEN_KEY, String(Date.now()));
     } catch {
       // Non-critical
+    }
+  }
+
+  async function rescheduleAll() {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // 1. Fetch upcoming reminders
+    const { data: reminders } = await supabase
+      .from('reminders')
+      .select('*')
+      .gte('remind_at', new Date().toISOString());
+
+    for (const reminder of reminders || []) {
+      const reminderDate = new Date(reminder.remind_at);
+      await scheduleNotification({
+        id: `reminder_${reminder.id}`,
+        title: '⏰ AHM Reminder',
+        body: reminder.description,
+        dateIST: reminderDate,
+        screen: 'Reminders',
+      });
+      await scheduleEarlyNotification({
+        id: `reminder_${reminder.id}`,
+        title: '🔔 Coming up in 10 minutes',
+        body: reminder.description,
+        dateIST: reminderDate,
+        minutesBefore: 10,
+        screen: 'Reminders',
+      });
+    }
+
+    // 2. Fetch upcoming tasks
+    const { data: tasks } = await supabase
+      .from('tasks')
+      .select('*')
+      .gte('finish_date', todayStr);
+
+    for (const task of tasks || []) {
+      if (task.finish_date) {
+        const [year, month, day] = task.finish_date.split('-').map(Number);
+        const dueDate = new Date(year, month - 1, day);
+
+        // Notify on the day at 9am
+        const notifyDate = new Date(dueDate);
+        notifyDate.setHours(9, 0, 0, 0);
+        await scheduleNotification({
+          id: `task_${task.id}`,
+          title: '📋 Task Due Today',
+          body: task.name,
+          dateIST: notifyDate,
+          screen: 'Tasks',
+        });
+
+        // Notify 1 day before at 9am
+        const dayBefore = new Date(dueDate);
+        dayBefore.setDate(dayBefore.getDate() - 1);
+        dayBefore.setHours(9, 0, 0, 0);
+        await scheduleNotification({
+          id: `task_before_${task.id}`,
+          title: '⚠️ Task Due Tomorrow',
+          body: task.name,
+          dateIST: dayBefore,
+          screen: 'Tasks',
+        });
+
+        // Notify 3 days before at 9am
+        const threeDaysBefore = new Date(dueDate);
+        threeDaysBefore.setDate(threeDaysBefore.getDate() - 3);
+        threeDaysBefore.setHours(9, 0, 0, 0);
+        await scheduleNotification({
+          id: `task_3days_${task.id}`,
+          title: '📅 Task Due in 3 Days',
+          body: task.name,
+          dateIST: threeDaysBefore,
+          screen: 'Tasks',
+        });
+      }
+    }
+
+    // 3. Fetch upcoming day plans
+    const { data: plans } = await supabase
+      .from('day_plans')
+      .select('*')
+      .gte('plan_date', todayStr);
+
+    for (const plan of plans || []) {
+      const planDateTime = parsePlanDateTime(plan.plan_date, plan.plan_time);
+
+      if (planDateTime > new Date()) {
+        await scheduleNotification({
+          id: `dayplan_${plan.id}`,
+          title: '📅 Planned: ' + plan.title,
+          body: plan.details || 'Time for your planned activity',
+          dateIST: planDateTime,
+          screen: 'Day',
+        });
+        await scheduleEarlyNotification({
+          id: `dayplan_${plan.id}`,
+          title: '⏰ Starting in 10 mins',
+          body: plan.title,
+          dateIST: planDateTime,
+          minutesBefore: 10,
+          screen: 'Day',
+        });
+      }
+
+      const [y, m, d] = plan.plan_date.split('-').map(Number);
+      const morningReminder = new Date(y, m - 1, d, 8, 0, 0);
+      if (morningReminder > new Date()) {
+        await scheduleNotification({
+          id: `dayplan_morning_${plan.id}`,
+          title: '🌅 Today: ' + plan.title,
+          body: `Planned for ${plan.plan_time}`,
+          dateIST: morningReminder,
+          screen: 'Day',
+        });
+      }
+    }
+
+    // 4. Fetch birthdays
+    const { data: birthdays } = await supabase
+      .from('birthdays')
+      .select('*');
+
+    const currentYear = new Date().getFullYear();
+    for (const bd of birthdays || []) {
+      for (const year of [currentYear, currentYear + 1]) {
+        const birthdayDate = new Date(year, bd.month - 1, bd.day, 8, 0, 0);
+        if (birthdayDate > new Date()) {
+          await scheduleNotification({
+            id: `birthday_${bd.id}_${year}`,
+            title: '🎂 Birthday Today!',
+            body: `Today is ${bd.name}'s birthday!`,
+            dateIST: birthdayDate,
+            screen: 'Daily',
+          });
+
+          const dayBefore = new Date(birthdayDate);
+          dayBefore.setDate(dayBefore.getDate() - 1);
+          dayBefore.setHours(8, 0, 0, 0);
+          await scheduleNotification({
+            id: `birthday_before_${bd.id}_${year}`,
+            title: '🎁 Birthday Tomorrow',
+            body: `Tomorrow is ${bd.name}'s birthday!`,
+            dateIST: dayBefore,
+            screen: 'Daily',
+          });
+        }
+      }
     }
   }
 

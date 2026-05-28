@@ -18,6 +18,7 @@
     },
     "android": {
       "package": "com.ahm.mobile",
+      "useNextNotificationsApi": true,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -34,7 +35,14 @@
       }
     },
     "plugins": [
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff",
+          "sounds": []
+        }
+      ],
       [
         "expo-build-properties",
         {
@@ -60,8 +68,6 @@
           "contactsPermission": "AHM needs access to your contacts to import them as a backup."
         }
       ],
-
-
       "expo-font"
     ],
     "extra": {

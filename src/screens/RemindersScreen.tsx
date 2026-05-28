@@ -10,9 +10,9 @@ import { FloatingButton } from '../components/FloatingButton';
 import { FormModal } from '../components/FormModal';
 import { ScreenHeader } from '../components/ScreenHeader';
 import {
-  cancelReminderNotifications,
-  prepareNotifications,
-  scheduleReminderNotification
+  cancelNotification,
+  scheduleNotification,
+  scheduleEarlyNotification
 } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
 import { Reminder, RootStackParamList } from '../lib/types';
@@ -65,7 +65,7 @@ export function RemindersScreen({ navigation }: NativeStackScreenProps<RootStack
   const [showDate, setShowDate] = useState(false);
   const [showTime, setShowTime] = useState(false);
 
-  useEffect(() => { prepareNotifications(); loadReminders(); }, []);
+  useEffect(() => { loadReminders(); }, []);
 
   async function loadReminders() {
     setLoading(true);
@@ -86,19 +86,35 @@ export function RemindersScreen({ navigation }: NativeStackScreenProps<RootStack
     );
     if (combined <= new Date()) { Alert.alert('Invalid', 'Please choose a future date and time.'); return; }
 
-    const { notification_id, notification_early_id } = await scheduleReminderNotification({
-      description: description.trim(),
-      remind_at: combined.toISOString()
-    });
-
-    const { error } = await supabase.from('reminders').insert({
+    const { data, error } = await supabase.from('reminders').insert({
       description: description.trim(),
       remind_at: combined.toISOString(),
       fired: false,
-      notification_id: notification_id ?? null,
-      notification_early_id: notification_early_id ?? null,
+    }).select().single();
+
+    if (error || !data) { Alert.alert('Error', error?.message || 'Failed to save reminder'); return; }
+
+    const reminderDate = new Date(data.remind_at);
+
+    // Schedule notification at exact time
+    await scheduleNotification({
+      id: `reminder_${data.id}`,
+      title: '⏰ AHM Reminder',
+      body: data.description,
+      dateIST: reminderDate,
+      screen: 'Reminders',
     });
-    if (error) { Alert.alert('Error', error.message); return; }
+
+    // Schedule 10 minutes early warning
+    await scheduleEarlyNotification({
+      id: `reminder_${data.id}`,
+      title: '🔔 Coming up in 10 minutes',
+      body: data.description,
+      dateIST: reminderDate,
+      minutesBefore: 10,
+      screen: 'Reminders',
+    });
+
     setDescription(''); setDate(new Date()); setTime(new Date());
     setModalVisible(false);
     await loadReminders();
@@ -106,7 +122,7 @@ export function RemindersScreen({ navigation }: NativeStackScreenProps<RootStack
 
   function handleDelete(reminder: Reminder) {
     // Cancel notifications immediately
-    cancelReminderNotifications(reminder);
+    cancelNotification(`reminder_${reminder.id}`);
     setReminders((prev) => prev.filter((r) => r.id !== reminder.id));
     showUndo({
       label: `Deleted: ${reminder.description}`,
@@ -116,6 +132,23 @@ export function RemindersScreen({ navigation }: NativeStackScreenProps<RootStack
             new Date(a.remind_at).getTime() - new Date(b.remind_at).getTime()
           )
         );
+        // Reschedule notifications on restore
+        const reminderDate = new Date(reminder.remind_at);
+        await scheduleNotification({
+          id: `reminder_${reminder.id}`,
+          title: '⏰ AHM Reminder',
+          body: reminder.description,
+          dateIST: reminderDate,
+          screen: 'Reminders',
+        });
+        await scheduleEarlyNotification({
+          id: `reminder_${reminder.id}`,
+          title: '🔔 Coming up in 10 minutes',
+          body: reminder.description,
+          dateIST: reminderDate,
+          minutesBefore: 10,
+          screen: 'Reminders',
+        });
       },
       onConfirmDelete: async () => {
         await supabase.from('reminders').delete().eq('id', reminder.id);

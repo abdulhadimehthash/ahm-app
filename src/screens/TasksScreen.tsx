@@ -7,7 +7,7 @@ import { FloatingButton } from '../components/FloatingButton';
 import { FormModal } from '../components/FormModal';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { formatDate, toIsoDate } from '../lib/date';
-import { cancelTaskNotifications, prepareNotifications, scheduleTaskNotifications } from '../lib/notifications';
+import { cancelNotification, scheduleNotification } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
 import { RootStackParamList, TaskEntry } from '../lib/types';
 import { useUndo } from '../lib/undoManager';
@@ -24,7 +24,6 @@ export function TasksScreen({ navigation }: NativeStackScreenProps<RootStackPara
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    prepareNotifications();
     loadTasks();
   }, []);
 
@@ -36,17 +35,65 @@ export function TasksScreen({ navigation }: NativeStackScreenProps<RootStackPara
     setTasks(data ?? []);
   }
 
+  async function scheduleAllTaskNotifications(task: { id: string; name: string; finish_date: string }) {
+    if (task.finish_date) {
+      const [year, month, day] = task.finish_date.split('-').map(Number);
+      const dueDate = new Date(year, month - 1, day);
+
+      // Notify on the day at 9am
+      const notifyDate = new Date(dueDate);
+      notifyDate.setHours(9, 0, 0, 0);
+      await scheduleNotification({
+        id: `task_${task.id}`,
+        title: '📋 Task Due Today',
+        body: task.name,
+        dateIST: notifyDate,
+        screen: 'Tasks',
+      });
+
+      // Notify 1 day before at 9am
+      const dayBefore = new Date(dueDate);
+      dayBefore.setDate(dayBefore.getDate() - 1);
+      dayBefore.setHours(9, 0, 0, 0);
+      await scheduleNotification({
+        id: `task_before_${task.id}`,
+        title: '⚠️ Task Due Tomorrow',
+        body: task.name,
+        dateIST: dayBefore,
+        screen: 'Tasks',
+      });
+
+      // Notify 3 days before at 9am
+      const threeDaysBefore = new Date(dueDate);
+      threeDaysBefore.setDate(threeDaysBefore.getDate() - 3);
+      threeDaysBefore.setHours(9, 0, 0, 0);
+      await scheduleNotification({
+        id: `task_3days_${task.id}`,
+        title: '📅 Task Due in 3 Days',
+        body: task.name,
+        dateIST: threeDaysBefore,
+        screen: 'Tasks',
+      });
+    }
+  }
+
   async function saveTask() {
     if (!name.trim()) return;
-    await prepareNotifications();
     const isoDate = toIsoDate(finishDate);
-    const notificationIds = await scheduleTaskNotifications(name.trim(), isoDate);
-    const { error } = await supabase.from('tasks').insert({
-      name: name.trim(),
-      finish_date: isoDate,
-      ...notificationIds
-    });
-    if (error) return;
+    
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert({
+        name: name.trim(),
+        finish_date: isoDate,
+      })
+      .select()
+      .single();
+
+    if (error || !data) return;
+
+    await scheduleAllTaskNotifications(data);
+
     setName('');
     setFinishDate(new Date());
     setModalVisible(false);
@@ -54,8 +101,11 @@ export function TasksScreen({ navigation }: NativeStackScreenProps<RootStackPara
   }
 
   function requestDelete(task: TaskEntry, label: string) {
-    // Cancel notifications immediately (can't reschedule on undo without the original params)
-    cancelTaskNotifications(task);
+    // Cancel notifications immediately
+    cancelNotification(`task_${task.id}`);
+    cancelNotification(`task_before_${task.id}`);
+    cancelNotification(`task_3days_${task.id}`);
+
     setTasks((prev) => prev.filter((t) => t.id !== task.id));
     showUndo({
       label,
@@ -63,6 +113,7 @@ export function TasksScreen({ navigation }: NativeStackScreenProps<RootStackPara
         setTasks((prev) =>
           [...prev, task].sort((a, b) => a.finish_date.localeCompare(b.finish_date))
         );
+        await scheduleAllTaskNotifications(task);
       },
       onConfirmDelete: async () => {
         await supabase.from('tasks').delete().eq('id', task.id);

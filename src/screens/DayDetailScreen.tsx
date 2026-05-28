@@ -9,8 +9,10 @@ import { Feather } from '@expo/vector-icons';
 import { Field } from '../components/Field';
 import { FormModal } from '../components/FormModal';
 import {
-  scheduleDayPlanNotifications,
-  cancelDayPlanNotifications
+  cancelNotification,
+  scheduleNotification,
+  scheduleEarlyNotification,
+  parsePlanDateTime
 } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
 import { DayPlan, RootStackParamList } from '../lib/types';
@@ -118,6 +120,45 @@ export function DayDetailScreen({ route, navigation }: NativeStackScreenProps<Ro
     setEditVisible(true);
   }
 
+  async function scheduleAllDayPlanNotifications(plan: { id: string; title: string; plan_date: string; plan_time: string; details: string | null }) {
+    const planDateTime = parsePlanDateTime(plan.plan_date, plan.plan_time);
+
+    // 1. Notify at exact time
+    await scheduleNotification({
+      id: `dayplan_${plan.id}`,
+      title: '📅 Planned: ' + plan.title,
+      body: plan.details || 'Time for your planned activity',
+      dateIST: planDateTime,
+      screen: 'Day',
+    });
+
+    // 2. Notify 10 minutes before
+    await scheduleEarlyNotification({
+      id: `dayplan_${plan.id}`,
+      title: '⏰ Starting in 10 mins',
+      body: plan.title,
+      dateIST: planDateTime,
+      minutesBefore: 10,
+      screen: 'Day',
+    });
+
+    // 3. Notify at 8am on that day
+    const [y, m, d] = plan.plan_date.split('-').map(Number);
+    const morningReminder = new Date(y, m - 1, d, 8, 0, 0);
+    await scheduleNotification({
+      id: `dayplan_morning_${plan.id}`,
+      title: '🌅 Today: ' + plan.title,
+      body: `Planned for ${plan.plan_time}`,
+      dateIST: morningReminder,
+      screen: 'Day',
+    });
+  }
+
+  async function cancelAllDayPlanNotifications(planId: string) {
+    await cancelNotification(`dayplan_${planId}`);
+    await cancelNotification(`dayplan_morning_${planId}`);
+  }
+
   async function saveEdit() {
     if (!plan) return;
     if (!title.trim()) {
@@ -129,32 +170,28 @@ export function DayDetailScreen({ route, navigation }: NativeStackScreenProps<Ro
     const timeStr = formatTime12hr(planTime);
 
     // Cancel old notifications first
-    await cancelDayPlanNotifications(plan);
+    await cancelAllDayPlanNotifications(plan.id);
 
-    // Schedule new notifications
-    const { notification_id, notification_early_id } = await scheduleDayPlanNotifications({
-      title: title.trim(),
-      plan_date: dateStr,
-      plan_time: timeStr
-    });
-
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('day_plans')
       .update({
         title: title.trim(),
         plan_date: dateStr,
         plan_time: timeStr,
         details: details.trim() || null,
-        notification_id,
-        notification_early_id,
         plan_type: planType
       })
-      .eq('id', plan.id);
+      .eq('id', plan.id)
+      .select()
+      .single();
 
-    if (error) {
-      Alert.alert('Error', error.message);
+    if (error || !data) {
+      Alert.alert('Error', error?.message || 'Failed to update plan');
       return;
     }
+
+    // Schedule new notifications
+    await scheduleAllDayPlanNotifications(data);
 
     setEditVisible(false);
     await loadPlan();
@@ -169,7 +206,7 @@ export function DayDetailScreen({ route, navigation }: NativeStackScreenProps<Ro
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await cancelDayPlanNotifications(plan);
+          await cancelAllDayPlanNotifications(plan.id);
           const { error } = await supabase.from('day_plans').delete().eq('id', plan.id);
           if (error) {
             Alert.alert('Error', error.message);
