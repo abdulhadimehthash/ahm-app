@@ -9,7 +9,7 @@ import { Field } from '../components/Field';
 import { FloatingButton } from '../components/FloatingButton';
 import { FormModal } from '../components/FormModal';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { cancelNotification, scheduleNotification } from '../lib/notifications';
+import { scheduleAllBirthdayNotifications, cancelAllBirthdayNotifications } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
 import { BirthdayEntry, RootStackParamList, TaskEntry } from '../lib/types';
 import { colors } from '../theme/colors';
@@ -108,42 +108,7 @@ export function DailyScreen({ navigation }: NativeStackScreenProps<RootStackPara
     [birthdays]
   );
 
-  async function scheduleAllBirthdayNotifications(bd: { id: string; name: string; day: number; month: number }) {
-    const currentYear = new Date().getFullYear();
-    for (const year of [currentYear, currentYear + 1]) {
-      const birthdayDate = new Date(year, bd.month - 1, bd.day, 8, 0, 0);
-      if (birthdayDate > new Date()) {
-        // On the day
-        await scheduleNotification({
-          id: `birthday_${bd.id}_${year}`,
-          title: '🎂 Birthday Today!',
-          body: `Today is ${bd.name}'s birthday!`,
-          dateIST: birthdayDate,
-          screen: 'Daily',
-        });
-
-        // Day before
-        const dayBefore = new Date(birthdayDate);
-        dayBefore.setDate(dayBefore.getDate() - 1);
-        dayBefore.setHours(8, 0, 0, 0);
-        await scheduleNotification({
-          id: `birthday_before_${bd.id}_${year}`,
-          title: '🎁 Birthday Tomorrow',
-          body: `Tomorrow is ${bd.name}'s birthday!`,
-          dateIST: dayBefore,
-          screen: 'Daily',
-        });
-      }
-    }
-  }
-
-  async function cancelAllBirthdayNotifications(bdId: string) {
-    const currentYear = new Date().getFullYear();
-    for (const year of [currentYear, currentYear + 1]) {
-      await cancelNotification(`birthday_${bdId}_${year}`);
-      await cancelNotification(`birthday_before_${bdId}_${year}`);
-    }
-  }
+  // Using imported birthday notification helpers
 
   async function saveBirthday() {
     const day = parseInt(bdDay);

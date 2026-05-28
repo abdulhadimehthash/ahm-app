@@ -14,7 +14,9 @@ import {
   scheduleNotification,
   scheduleEarlyNotification,
   cancelNotification,
-  parsePlanDateTime,
+  scheduleAllTaskNotifications,
+  scheduleAllDayPlanNotifications,
+  scheduleAllBirthdayNotifications,
 } from './src/lib/notifications';
 import { supabase } from './src/lib/supabase';
 import { Alert } from 'react-native';
@@ -146,45 +148,7 @@ export default function App() {
       .gte('finish_date', todayStr);
 
     for (const task of tasks || []) {
-      if (task.finish_date) {
-        const [year, month, day] = task.finish_date.split('-').map(Number);
-        const dueDate = new Date(year, month - 1, day);
-
-        // Notify on the day at 9am
-        const notifyDate = new Date(dueDate);
-        notifyDate.setHours(9, 0, 0, 0);
-        await scheduleNotification({
-          id: `task_${task.id}`,
-          title: '📋 Task Due Today',
-          body: task.name,
-          dateIST: notifyDate,
-          screen: 'Tasks',
-        });
-
-        // Notify 1 day before at 9am
-        const dayBefore = new Date(dueDate);
-        dayBefore.setDate(dayBefore.getDate() - 1);
-        dayBefore.setHours(9, 0, 0, 0);
-        await scheduleNotification({
-          id: `task_before_${task.id}`,
-          title: '⚠️ Task Due Tomorrow',
-          body: task.name,
-          dateIST: dayBefore,
-          screen: 'Tasks',
-        });
-
-        // Notify 3 days before at 9am
-        const threeDaysBefore = new Date(dueDate);
-        threeDaysBefore.setDate(threeDaysBefore.getDate() - 3);
-        threeDaysBefore.setHours(9, 0, 0, 0);
-        await scheduleNotification({
-          id: `task_3days_${task.id}`,
-          title: '📅 Task Due in 3 Days',
-          body: task.name,
-          dateIST: threeDaysBefore,
-          screen: 'Tasks',
-        });
-      }
+      await scheduleAllTaskNotifications(task);
     }
 
     // 3. Fetch upcoming day plans
@@ -194,37 +158,7 @@ export default function App() {
       .gte('plan_date', todayStr);
 
     for (const plan of plans || []) {
-      const planDateTime = parsePlanDateTime(plan.plan_date, plan.plan_time);
-
-      if (planDateTime > new Date()) {
-        await scheduleNotification({
-          id: `dayplan_${plan.id}`,
-          title: '📅 Planned: ' + plan.title,
-          body: plan.details || 'Time for your planned activity',
-          dateIST: planDateTime,
-          screen: 'Day',
-        });
-        await scheduleEarlyNotification({
-          id: `dayplan_${plan.id}`,
-          title: '⏰ Starting in 10 mins',
-          body: plan.title,
-          dateIST: planDateTime,
-          minutesBefore: 10,
-          screen: 'Day',
-        });
-      }
-
-      const [y, m, d] = plan.plan_date.split('-').map(Number);
-      const morningReminder = new Date(y, m - 1, d, 8, 0, 0);
-      if (morningReminder > new Date()) {
-        await scheduleNotification({
-          id: `dayplan_morning_${plan.id}`,
-          title: '🌅 Today: ' + plan.title,
-          body: `Planned for ${plan.plan_time}`,
-          dateIST: morningReminder,
-          screen: 'Day',
-        });
-      }
+      await scheduleAllDayPlanNotifications(plan);
     }
 
     // 4. Fetch birthdays
@@ -232,31 +166,8 @@ export default function App() {
       .from('birthdays')
       .select('*');
 
-    const currentYear = new Date().getFullYear();
     for (const bd of birthdays || []) {
-      for (const year of [currentYear, currentYear + 1]) {
-        const birthdayDate = new Date(year, bd.month - 1, bd.day, 8, 0, 0);
-        if (birthdayDate > new Date()) {
-          await scheduleNotification({
-            id: `birthday_${bd.id}_${year}`,
-            title: '🎂 Birthday Today!',
-            body: `Today is ${bd.name}'s birthday!`,
-            dateIST: birthdayDate,
-            screen: 'Daily',
-          });
-
-          const dayBefore = new Date(birthdayDate);
-          dayBefore.setDate(dayBefore.getDate() - 1);
-          dayBefore.setHours(8, 0, 0, 0);
-          await scheduleNotification({
-            id: `birthday_before_${bd.id}_${year}`,
-            title: '🎁 Birthday Tomorrow',
-            body: `Tomorrow is ${bd.name}'s birthday!`,
-            dateIST: dayBefore,
-            screen: 'Daily',
-          });
-        }
-      }
+      await scheduleAllBirthdayNotifications(bd);
     }
   }
 

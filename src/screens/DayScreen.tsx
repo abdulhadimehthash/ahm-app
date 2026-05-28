@@ -10,9 +10,8 @@ import { Field } from '../components/Field';
 import { FormModal } from '../components/FormModal';
 import { ScreenHeader } from '../components/ScreenHeader';
 import {
-  cancelNotification,
-  scheduleNotification,
-  scheduleEarlyNotification,
+  scheduleAllDayPlanNotifications,
+  cancelAllDayPlanNotifications,
   convertTo24hr,
   parsePlanDateTime
 } from '../lib/notifications';
@@ -215,44 +214,7 @@ export function DayScreen({ navigation }: NativeStackScreenProps<RootStackParamL
     setModalVisible(true);
   }
 
-  async function scheduleAllDayPlanNotifications(plan: { id: string; title: string; plan_date: string; plan_time: string; details: string | null }) {
-    const planDateTime = parsePlanDateTime(plan.plan_date, plan.plan_time);
-
-    // 1. Notify at exact time
-    await scheduleNotification({
-      id: `dayplan_${plan.id}`,
-      title: '📅 Planned: ' + plan.title,
-      body: plan.details || 'Time for your planned activity',
-      dateIST: planDateTime,
-      screen: 'Day',
-    });
-
-    // 2. Notify 10 minutes before
-    await scheduleEarlyNotification({
-      id: `dayplan_${plan.id}`,
-      title: '⏰ Starting in 10 mins',
-      body: plan.title,
-      dateIST: planDateTime,
-      minutesBefore: 10,
-      screen: 'Day',
-    });
-
-    // 3. Notify at 8am on that day
-    const [y, m, d] = plan.plan_date.split('-').map(Number);
-    const morningReminder = new Date(y, m - 1, d, 8, 0, 0);
-    await scheduleNotification({
-      id: `dayplan_morning_${plan.id}`,
-      title: '🌅 Today: ' + plan.title,
-      body: `Planned for ${plan.plan_time}`,
-      dateIST: morningReminder,
-      screen: 'Day',
-    });
-  }
-
-  async function cancelAllDayPlanNotifications(planId: string) {
-    await cancelNotification(`dayplan_${planId}`);
-    await cancelNotification(`dayplan_morning_${planId}`);
-  }
+  // Using imported day plan notification helpers
 
   async function savePlan() {
     if (!title.trim()) {
