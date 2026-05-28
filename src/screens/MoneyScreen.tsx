@@ -87,7 +87,13 @@ export function MoneyScreen({ navigation }: NativeStackScreenProps<RootStackPara
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={<Text style={styles.empty}>No income entries yet.</Text>}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyIcon}>💰</Text>
+                <Text style={styles.emptyTitle}>No income entries yet</Text>
+                <Text style={styles.emptySub}>Tap + to record your first income</Text>
+              </View>
+            }
             renderItem={({ item }) => (
               <Pressable
                 onLongPress={() => {
@@ -239,11 +245,14 @@ const styles = StyleSheet.create({
   },
   listContent: { paddingBottom: 120 },
   loader: { flex: 1, justifyContent: 'center' },
-  empty: { color: colors.muted, textAlign: 'center', marginTop: 80, fontSize: 15 },
+  emptyContainer: { alignItems: 'center', marginTop: 80 },
+  emptyIcon: { fontSize: 48, marginBottom: 16 },
+  emptyTitle: { color: colors.white, fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  emptySub: { color: colors.muted, fontSize: 14 },
   pickerWrap: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 20,
     overflow: 'hidden',
     backgroundColor: colors.surfaceLight

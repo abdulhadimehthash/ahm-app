@@ -167,7 +167,7 @@ export function CalendarScreen({ navigation }: NativeStackScreenProps<RootStackP
 const styles = StyleSheet.create({
   calCard: { backgroundColor:colors.card, borderRadius:16, borderWidth:1, borderColor:colors.border, padding:16, marginBottom:20, shadowColor:'#000', shadowOffset:{width:0,height:4}, shadowOpacity:0.3, shadowRadius:8, elevation:4 },
   monthNav: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:16 },
-  navBtn: { width:36, height:36, alignItems:'center', justifyContent:'center', backgroundColor:colors.surfaceLight, borderRadius:10, borderWidth:1, borderColor:colors.border },
+  navBtn: { width:36, height:36, alignItems:'center', justifyContent:'center', backgroundColor:colors.surfaceLight, borderRadius:16, borderWidth:1, borderColor:colors.border },
   navBtnText: { color:colors.white, fontSize:22, fontWeight:'600' },
   monthLabel: { color:colors.white, fontSize:16, fontWeight:'700' },
   dayHeaders: { flexDirection:'row', marginBottom:8 },
@@ -183,15 +183,15 @@ const styles = StyleSheet.create({
   dot: { width:4, height:4, borderRadius:2, backgroundColor:colors.green, marginTop:2 },
   dotSel: { backgroundColor:colors.black },
   agendaTitle: { color:colors.white, fontSize:15, fontWeight:'700', marginBottom:12 },
-  todoCard: { backgroundColor:colors.card, borderRadius:14, borderWidth:1, borderColor:colors.border, padding:14, flexDirection:'row', alignItems:'center', marginBottom:10 },
+  todoCard: { backgroundColor:colors.card, borderRadius:16, borderWidth:1, borderColor:colors.border, padding:14, flexDirection:'row', alignItems:'center', marginBottom:10 },
   todoCheck: { width:24, height:24, borderRadius:8, borderWidth:2, borderColor:colors.border, marginRight:12, alignItems:'center', justifyContent:'center' },
   todoCheckDone: { backgroundColor:colors.green, borderColor:colors.green },
   checkMark: { color:colors.white, fontSize:13, fontWeight:'700' },
   todoName: { color:colors.white, fontSize:15, fontWeight:'600', flex:1 },
   todoNameDone: { color:colors.muted, textDecorationLine:'line-through' },
   empty: { color:colors.muted, textAlign:'center', marginTop:20, fontSize:14 },
-  dateBtn: { minHeight:52, backgroundColor:colors.surfaceLight, borderRadius:12, borderWidth:1, borderColor:colors.border, paddingHorizontal:16, justifyContent:'center', marginBottom:20 },
+  dateBtn: { minHeight:52, backgroundColor:colors.surfaceLight, borderRadius:16, borderWidth:1, borderColor:colors.border, paddingHorizontal:16, justifyContent:'center', marginBottom:20 },
   dateBtnText: { color:colors.white, fontSize:16, fontWeight:'600' },
-  saveBtn: { minHeight:56, borderRadius:12, backgroundColor:colors.green, alignItems:'center', justifyContent:'center', marginTop:8 },
+  saveBtn: { minHeight:56, borderRadius:16, backgroundColor:colors.green, alignItems:'center', justifyContent:'center', marginTop:8 },
   saveBtnText: { color:colors.white, fontSize:16, fontWeight:'700' }
 });

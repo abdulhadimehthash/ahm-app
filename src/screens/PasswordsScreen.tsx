@@ -91,7 +91,13 @@ export function PasswordsScreen({ navigation }: NativeStackScreenProps<RootStack
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={<Text style={styles.empty}>No saved passwords.</Text>}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyIcon}>🔒</Text>
+                <Text style={styles.emptyTitle}>No saved passwords</Text>
+                <Text style={styles.emptySub}>Tap + to store your credentials securely</Text>
+              </View>
+            }
             renderItem={({ item }) => (
               <Pressable
                 onLongPress={() => {
@@ -194,7 +200,7 @@ const styles = StyleSheet.create({
   filterButton: {
     flex: 1,
     minHeight: 46,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
@@ -235,7 +241,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.05)'
   },
@@ -272,16 +278,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13
   },
-  empty: {
+  emptyContainer: {
+    alignItems: 'center',
+    marginTop: 80
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16
+  },
+  emptyTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8
+  },
+  emptySub: {
     color: colors.muted,
-    textAlign: 'center',
-    marginTop: 80,
-    fontSize: 15
+    fontSize: 14
   },
   pickerWrap: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 20,
     overflow: 'hidden',
     backgroundColor: colors.bg

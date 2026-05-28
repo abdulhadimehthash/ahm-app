@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   },
   pinInput: {
     height: 64,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     color: colors.white,
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   },
   unlockBtn: {
     height: 52,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',

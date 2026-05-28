@@ -231,8 +231,8 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 48, marginBottom: 16 },
   emptyText: { color: colors.white, fontSize: 18, fontWeight: '700', marginBottom: 8 },
   emptySubtext: { color: colors.muted, fontSize: 14 },
-  dateBtn: { minHeight: 52, backgroundColor: colors.surfaceLight, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, justifyContent: 'center', marginBottom: 16 },
+  dateBtn: { minHeight: 52, backgroundColor: colors.surfaceLight, borderRadius: 16, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, justifyContent: 'center', marginBottom: 16 },
   dateBtnText: { color: colors.white, fontSize: 16, fontWeight: '600' },
-  saveBtn: { minHeight: 56, borderRadius: 12, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  saveBtn: { minHeight: 56, borderRadius: 16, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   saveBtnText: { color: colors.white, fontSize: 16, fontWeight: '700' }
 });

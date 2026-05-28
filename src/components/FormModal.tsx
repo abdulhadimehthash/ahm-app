@@ -58,7 +58,7 @@ export function FormModal({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.card,
+    backgroundColor: colors.bg,
     paddingHorizontal: 20,
   },
   inner: {
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 16,
     borderColor: colors.border,
     backgroundColor: colors.surfaceLight,
   },

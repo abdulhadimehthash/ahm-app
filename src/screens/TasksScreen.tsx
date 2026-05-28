@@ -140,7 +140,13 @@ export function TasksScreen({ navigation }: NativeStackScreenProps<RootStackPara
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={<Text style={styles.empty}>No tasks saved.</Text>}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyIcon}>📋</Text>
+                <Text style={styles.emptyTitle}>No tasks saved</Text>
+                <Text style={styles.emptySub}>Tap + to create a new task and set reminders</Text>
+              </View>
+            }
             renderItem={({ item }) => (
               <View style={sharedStyles.card}>
                 <View style={styles.taskTop}>
@@ -211,16 +217,19 @@ const styles = StyleSheet.create({
   taskName: { color: colors.white, fontSize: 18, fontWeight: '700', marginBottom: 6 },
   date: { color: colors.muted, fontSize: 13, fontWeight: '600' },
   actions: { flexDirection: 'row', gap: 10 },
-  actionButton: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  actionButton: { width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   completeButton: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.white },
   deleteButton: { backgroundColor: colors.surfaceLight, borderWidth: 1, borderColor: colors.border },
   actionText: { color: colors.black, fontSize: 20, fontWeight: '700' },
   deleteActionText: { color: colors.white },
   listContent: { paddingBottom: 120 },
   loader: { flex: 1, justifyContent: 'center' },
-  empty: { color: colors.muted, textAlign: 'center', marginTop: 80, fontSize: 15 },
+  emptyContainer: { alignItems: 'center', marginTop: 80 },
+  emptyIcon: { fontSize: 48, marginBottom: 16 },
+  emptyTitle: { color: colors.white, fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  emptySub: { color: colors.muted, fontSize: 14 },
   dateButton: {
-    minHeight: 56, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
+    minHeight: 56, borderRadius: 16, borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: 16, justifyContent: 'center', backgroundColor: colors.bg, marginBottom: 24,
   },
   dateButtonText: { color: colors.white, fontSize: 16, fontWeight: '600' },

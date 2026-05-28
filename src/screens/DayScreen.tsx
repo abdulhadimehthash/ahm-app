@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceLight,
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border
   },
@@ -758,7 +758,7 @@ const styles = StyleSheet.create({
   },
   planBtn: {
     height: 52,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: colors.white,
     flexDirection: 'row',
     alignItems: 'center',
@@ -777,7 +777,7 @@ const styles = StyleSheet.create({
   pickerBtn: {
     minHeight: 52,
     backgroundColor: colors.surfaceLight,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: 16,
@@ -810,7 +810,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.surfaceLight
@@ -834,7 +834,7 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     minHeight: 56,
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',

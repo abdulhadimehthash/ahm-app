@@ -13,7 +13,7 @@ export const colors = {
   borderLight: '#2A2A2A',
 
   // Text
-  muted:       '#5A5A5A',
+  muted:       '#888888',
   placeholder: '#444444',
 
   // Status

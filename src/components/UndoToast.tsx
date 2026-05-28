@@ -66,10 +66,10 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   inner: {
-    backgroundColor: '#1C1C1C',
+    backgroundColor: colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   sub: { color: colors.muted, fontSize: 12 },
   undoBtn: {
     backgroundColor: colors.white,
-    borderRadius: 10,
+    borderRadius: 16,
     paddingVertical: 8,
     paddingHorizontal: 16,
   },

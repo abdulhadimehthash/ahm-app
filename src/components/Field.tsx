@@ -33,8 +33,8 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 52,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: 12,
+    borderColor: colors.border,
+    borderRadius: 16,
     color: colors.white,
     paddingHorizontal: 14,
     fontSize: 15,

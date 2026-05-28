@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
   typeIconWrap: {
     width: 48,
     height: 48,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: colors.surfaceLight,
     borderWidth: 1,
     borderColor: colors.border,
@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
   iconAction: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfaceLight,
@@ -767,9 +767,9 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 52,
     backgroundColor: colors.surfaceLight,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: colors.border,
     color: colors.white,
     paddingHorizontal: 14,
     fontSize: 15,
@@ -787,9 +787,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surfaceLight,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: colors.border,
     borderStyle: 'dashed',
     height: 52,
     paddingHorizontal: 14,
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
   previewThumb: {
     width: 80,
     height: 80,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
     right: -8,
     width: 22,
     height: 22,
-    borderRadius: 11,
+    borderRadius: 16,
     backgroundColor: colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
@@ -826,7 +826,7 @@ const styles = StyleSheet.create({
   // Generate button
   generateBtn: {
     height: 56,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -882,7 +882,7 @@ const styles = StyleSheet.create({
   },
   regenBtn: {
     height: 52,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',

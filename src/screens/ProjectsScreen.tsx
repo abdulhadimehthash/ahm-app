@@ -79,7 +79,13 @@ export function ProjectsScreen({ navigation }: NativeStackScreenProps<RootStackP
             keyExtractor={item => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 120 }}
-            ListEmptyComponent={<Text style={styles.empty}>No projects yet.</Text>}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyIcon}>📁</Text>
+                <Text style={styles.emptyTitle}>No projects yet</Text>
+                <Text style={styles.emptySub}>Tap + to start tracking a new project</Text>
+              </View>
+            }
             renderItem={({ item }) => (
               <Pressable
                 onLongPress={() => {
@@ -126,12 +132,15 @@ export function ProjectsScreen({ navigation }: NativeStackScreenProps<RootStackP
 }
 
 const styles = StyleSheet.create({
-  reportBtn: { height: 36, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card },
+  reportBtn: { height: 36, borderRadius: 16, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card },
   reportBtnText: { color: colors.white, fontWeight: '700', fontSize: 12 },
   card: { backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 18, marginBottom: 12 },
   projName: { color: colors.white, fontSize: 18, fontWeight: '700', marginBottom: 8 },
   domainTag: { alignSelf: 'flex-start', backgroundColor: colors.surfaceLight, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
   domainText: { color: colors.muted, fontSize: 12, fontWeight: '600' },
   projDesc: { color: colors.muted, fontSize: 14, lineHeight: 22 },
-  empty: { color: colors.muted, textAlign: 'center', marginTop: 80, fontSize: 14 }
+  emptyContainer: { alignItems: 'center', marginTop: 80 },
+  emptyIcon: { fontSize: 48, marginBottom: 16 },
+  emptyTitle: { color: colors.white, fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  emptySub: { color: colors.muted, fontSize: 14 }
 });

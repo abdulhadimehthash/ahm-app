@@ -125,12 +125,12 @@ export function SearchScreen({ navigation }: NativeStackScreenProps<RootStackPar
 }
 
 const styles = StyleSheet.create({
-  searchBar: { flexDirection:'row', alignItems:'center', backgroundColor:colors.card, borderRadius:14, borderWidth:1, borderColor:colors.border, paddingHorizontal:14, marginBottom:20, height:52 },
+  searchBar: { flexDirection:'row', alignItems:'center', backgroundColor:colors.card, borderRadius:16, borderWidth:1, borderColor:colors.border, paddingHorizontal:14, marginBottom:20, height:52 },
   searchIcon: { fontSize:16, marginRight:10 },
   searchInput: { flex:1, color:colors.white, fontSize:16 },
   clearBtn: { color:colors.muted, fontSize:24, paddingHorizontal:4 },
   sectionLabel: { color:colors.muted, fontSize:11, fontWeight:'700', textTransform:'uppercase', letterSpacing:1, marginBottom:8, marginTop:16 },
-  resultCard: { backgroundColor:colors.card, borderRadius:14, borderWidth:1, borderColor:colors.border, paddingVertical:12, paddingHorizontal:16, marginBottom:8 },
+  resultCard: { backgroundColor:colors.card, borderRadius:16, borderWidth:1, borderColor:colors.border, paddingVertical:12, paddingHorizontal:16, marginBottom:8 },
   resultTitle: { color:colors.white, fontSize:15, fontWeight:'700', marginBottom:3 },
   resultSubtitle: { color:colors.muted, fontSize:13 },
   noResults: { color:colors.muted, textAlign:'center', marginTop:40, fontSize:15 },

@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   rowChevron: { color:colors.muted, fontSize:20 },
   separator: { height:1, backgroundColor:colors.border, marginLeft:18 },
   pinForm: { paddingHorizontal:18, paddingBottom:16 },
-  pinInput: { height:48, backgroundColor:colors.surfaceLight, borderRadius:10, borderWidth:1, borderColor:colors.border, color:colors.white, paddingHorizontal:14, fontSize:15, marginBottom:10 },
-  smallBtn: { backgroundColor:colors.white, borderRadius:10, height:44, alignItems:'center', justifyContent:'center' },
+  pinInput: { height:48, backgroundColor:colors.surfaceLight, borderRadius:16, borderWidth:1, borderColor:colors.border, color:colors.white, paddingHorizontal:14, fontSize:15, marginBottom:10 },
+  smallBtn: { backgroundColor:colors.white, borderRadius:16, height:44, alignItems:'center', justifyContent:'center' },
   smallBtnText: { color:colors.black, fontWeight:'700', fontSize:14 }
 });

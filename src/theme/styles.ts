@@ -30,8 +30,8 @@ export const sharedStyles = StyleSheet.create({
   input: {
     minHeight: 52,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: 12,
+    borderColor: colors.border,
+    borderRadius: 16,
     color: colors.white,
     paddingHorizontal: 14,
     fontSize: 15,
@@ -53,7 +53,7 @@ export const sharedStyles = StyleSheet.create({
   },
   primaryButton: {
     height: 52,
-    borderRadius: 14,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.white,
@@ -66,7 +66,7 @@ export const sharedStyles = StyleSheet.create({
   },
   outlineButton: {
     height: 48,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderColor: colors.border,

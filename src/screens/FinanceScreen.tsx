@@ -209,7 +209,13 @@ export function FinanceScreen({ navigation }: NativeStackScreenProps<RootStackPa
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
-          ListEmptyComponent={<Text style={styles.empty}>No expenses this month.</Text>}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>💸</Text>
+              <Text style={styles.emptyTitle}>No expenses this month</Text>
+              <Text style={styles.emptySub}>Tap + to record your first expense</Text>
+            </View>
+          }
           ListHeaderComponent={
             <>
               {/* Net Summary Card */}
@@ -384,7 +390,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceLight,
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border
   },
@@ -460,11 +466,14 @@ const styles = StyleSheet.create({
   },
   listContent: { paddingBottom: 120 },
   loader: { alignItems: 'center', padding: 24 },
-  empty: { color: colors.muted, textAlign: 'center', marginTop: 40, fontSize: 15 },
+  emptyContainer: { alignItems: 'center', marginTop: 80 },
+  emptyIcon: { fontSize: 48, marginBottom: 16 },
+  emptyTitle: { color: colors.white, fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  emptySub: { color: colors.muted, fontSize: 14 },
   dateButton: {
     minHeight: 52,
     backgroundColor: colors.surfaceLight,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: 16,
@@ -474,7 +483,7 @@ const styles = StyleSheet.create({
   dateButtonText: { color: colors.white, fontSize: 16, fontWeight: '600' },
   saveButton: {
     minHeight: 56,
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: colors.green,
     alignItems: 'center',
     justifyContent: 'center',

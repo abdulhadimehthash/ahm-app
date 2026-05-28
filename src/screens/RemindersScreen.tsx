@@ -308,9 +308,9 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 48, marginBottom: 16 },
   emptyText: { color: colors.white, fontSize: 18, fontWeight: '700', marginBottom: 8 },
   emptySubtext: { color: colors.muted, fontSize: 14 },
-  pickerBtn: { minHeight: 52, backgroundColor: colors.surfaceLight, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, justifyContent: 'center', marginBottom: 16 },
+  pickerBtn: { minHeight: 52, backgroundColor: colors.surfaceLight, borderRadius: 16, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, justifyContent: 'center', marginBottom: 16 },
   pickerBtnText: { color: colors.white, fontSize: 16, fontWeight: '600' },
-  saveBtn: { minHeight: 56, borderRadius: 12, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  saveBtn: { minHeight: 56, borderRadius: 16, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   saveBtnText: { color: colors.white, fontSize: 16, fontWeight: '700' },
   delBtn: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 80, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center', borderRadius: 16 },
   delBtnText: { color: colors.white, fontWeight: '700', fontSize: 13 }

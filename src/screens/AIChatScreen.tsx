@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   headerBtn: {
-    width: 40, height: 40, borderRadius: 12, borderWidth: 1,
+    width: 40, height: 40, borderRadius: 16, borderWidth: 1,
     borderColor: colors.border, backgroundColor: colors.card,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   bubbleText: { fontSize: 15, lineHeight: 22 },
   bubbleTextUser: { color: colors.black },
   bubbleTextAI: { color: colors.white },
-  bubbleImage: { width: '100%', height: 180, borderRadius: 10, marginBottom: 8 },
+  bubbleImage: { width: '100%', height: 180, borderRadius: 16, marginBottom: 8 },
   timestamp: { fontSize: 10, marginTop: 4 },
   timestampUser: { color: 'rgba(0,0,0,0.4)', textAlign: 'right' },
   timestampAI: { color: colors.muted },
@@ -335,13 +335,13 @@ const styles = StyleSheet.create({
   inputAction: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   textInput: {
     flex: 1, color: colors.white, fontSize: 15,
-    backgroundColor: colors.surfaceLight, borderRadius: 20,
+    backgroundColor: colors.surfaceLight, borderRadius: 16,
     borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: 16, paddingVertical: 10,
     maxHeight: 120, lineHeight: 22,
   },
   sendBtn: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.white,
+    width: 40, height: 40, borderRadius: 16, backgroundColor: colors.white,
     alignItems: 'center', justifyContent: 'center',
   },
 });

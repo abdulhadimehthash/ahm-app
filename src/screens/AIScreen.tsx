@@ -671,14 +671,14 @@ const styles = StyleSheet.create({
   },
   toolCardInner: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 14 },
   toolIconWrap: {
-    width: 44, height: 44, borderRadius: 12,
+    width: 44, height: 44, borderRadius: 16,
     backgroundColor: colors.surfaceLight, borderWidth: 1,
     borderColor: colors.border, alignItems: 'center', justifyContent: 'center',
   },
   toolTitle: { color: colors.white, fontSize: 15, fontWeight: '700', marginBottom: 2 },
   toolSubtitle: { color: colors.muted, fontSize: 12 },
   chatFab: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: colors.surfaceLight,
+    width: 40, height: 40, borderRadius: 16, backgroundColor: colors.surfaceLight,
     borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center',
   },
   chatCard: {
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
   charCount: { color: colors.muted, fontSize: 12, marginTop: 2 },
   sheetScroll: { paddingBottom: 48 },
   iconBtn: {
-    width: 36, height: 36, borderRadius: 10, borderWidth: 1,
+    width: 36, height: 36, borderRadius: 16, borderWidth: 1,
     borderColor: colors.border, backgroundColor: colors.surfaceLight,
     alignItems: 'center', justifyContent: 'center', marginLeft: 8,
   },
@@ -725,8 +725,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8,
   },
   input: {
-    minHeight: 52, backgroundColor: colors.surfaceLight, borderRadius: 12,
-    borderWidth: 1, borderColor: colors.borderLight, color: colors.white,
+    minHeight: 52, backgroundColor: colors.surfaceLight, borderRadius: 16,
+    borderWidth: 1, borderColor: colors.border, color: colors.white,
     paddingHorizontal: 14, fontSize: 15, marginBottom: 20,
   },
   textArea: { minHeight: 110, paddingTop: 14, paddingBottom: 14, lineHeight: 22 },
@@ -734,23 +734,23 @@ const styles = StyleSheet.create({
   toggleLabel: { color: colors.white, fontSize: 14, fontWeight: '600' },
   imagePicker: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceLight,
-    borderRadius: 12, borderWidth: 1, borderColor: colors.borderLight,
+    borderRadius: 16, borderWidth: 1, borderColor: colors.border,
     borderStyle: 'dashed', height: 52, paddingHorizontal: 14, marginBottom: 12,
   },
   imagePickerText: { color: colors.muted, fontSize: 14 },
-  previewThumb: { width: 72, height: 72, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
+  previewThumb: { width: 72, height: 72, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
   removeThumb: {
     position: 'absolute', top: -6, right: -6, width: 20, height: 20,
-    borderRadius: 10, backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center',
+    borderRadius: 16, backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center',
   },
   // Buttons
   primaryBtn: {
-    height: 54, borderRadius: 14, backgroundColor: colors.white,
+    height: 54, borderRadius: 16, backgroundColor: colors.white,
     alignItems: 'center', justifyContent: 'center', flexDirection: 'row',
   },
   primaryBtnText: { color: colors.black, fontSize: 15, fontWeight: '700' },
   outlineBtn: {
-    height: 50, borderRadius: 14, borderWidth: 1, borderColor: colors.border,
+    height: 50, borderRadius: 16, borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center', flexDirection: 'row', marginBottom: 10,
   },
   outlineBtnText: { color: colors.white, fontSize: 14, fontWeight: '600' },
@@ -778,7 +778,7 @@ const liStyles = StyleSheet.create({
   },
   headerTitle: { color: colors.white, fontSize: 17, fontWeight: '700' },
   profileCard: {
-    margin: 12, padding: 14, backgroundColor: colors.card, borderRadius: 14,
+    margin: 12, padding: 14, backgroundColor: colors.card, borderRadius: 16,
     borderWidth: 1, borderColor: '#1A2A1A',
   },
   profileCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
@@ -792,7 +792,7 @@ const liStyles = StyleSheet.create({
   profileKey: { color: '#555', fontWeight: '700', fontSize: 11 },
   profileEdit: {
     backgroundColor: colors.card, marginHorizontal: 12, marginBottom: 8,
-    borderRadius: 14, padding: 14, maxHeight: 340,
+    borderRadius: 16, padding: 14, maxHeight: 340,
   },
   profileEditTitle: { color: colors.white, fontSize: 14, fontWeight: '700', marginBottom: 12 },
   listContent: { paddingHorizontal: 12, paddingVertical: 8, paddingBottom: 4 },
@@ -803,13 +803,13 @@ const liStyles = StyleSheet.create({
     width: 26, height: 26, borderRadius: 6, backgroundColor: '#0A66C2',
     alignItems: 'center', justifyContent: 'center', marginRight: 6, marginBottom: 20,
   },
-  bubble: { borderRadius: 14, paddingHorizontal: 13, paddingVertical: 9 },
+  bubble: { borderRadius: 16, paddingHorizontal: 13, paddingVertical: 9 },
   bubbleUser: { backgroundColor: colors.white, borderBottomRightRadius: 3 },
   bubbleAI: { backgroundColor: '#1E1E1E', borderBottomLeftRadius: 3 },
   bubbleText: { fontSize: 14, lineHeight: 21 },
   bubbleTextUser: { color: colors.black },
   bubbleTextAI: { color: colors.white },
-  bubbleImage: { width: 200, height: 150, borderRadius: 10, marginBottom: 6 },
+  bubbleImage: { width: 200, height: 150, borderRadius: 16, marginBottom: 6 },
   timestamp: { fontSize: 10, marginTop: 4 },
   tsUser: { color: 'rgba(0,0,0,0.4)', textAlign: 'right' },
   tsAI: { color: colors.muted },
@@ -842,7 +842,7 @@ const liStyles = StyleSheet.create({
   inputAction: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   textInput: {
     flex: 1, color: colors.white, fontSize: 14,
-    backgroundColor: colors.surfaceLight, borderRadius: 18,
+    backgroundColor: colors.surfaceLight, borderRadius: 16,
     borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: 14, paddingVertical: 9, maxHeight: 110, lineHeight: 20,
   },
