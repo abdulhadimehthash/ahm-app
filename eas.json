@@ -12,6 +12,16 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EAS_USE_CACHE": "1"
+      },
+      "cache": {
+        "key": "ahm-android-preview-v1",
+        "paths": [
+          "node_modules",
+          ".gradle"
+        ]
       }
     },
     "production": {
