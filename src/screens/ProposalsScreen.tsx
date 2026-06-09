@@ -20,11 +20,19 @@ import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { ScreenHeader } from '../components/ScreenHeader';
-import {
-  buildClientProposalPrompt,
-  buildConnectionProposalPrompt,
-  generateText,
-} from '../lib/gemini';
+import { callClaude } from '../lib/claude';
+
+const CLIENT_PROPOSAL_SYSTEM_PROMPT = 
+  "You are Abdul Hadi Methath, a 15 year old student developer from Kerala, India. " +
+  "Tech Lead at Kerala Startup Fest. Built school management system, Instagram automation, " +
+  "mobile apps with React Native and Supabase. Write a professional WhatsApp DM outreach proposal. " +
+  "Introduce yourself naturally, mention relevant experience, explain what you can do for them " +
+  "specifically, clear call to action. Conversational, professional, under 200 words.";
+
+const CONNECTION_PROPOSAL_SYSTEM_PROMPT = 
+  "You are Abdul Hadi Methath, a 15 year old student developer and Tech Lead at Kerala Startup Fest " +
+  "from Kerala, India. Write a genuine LinkedIn or WhatsApp connection message. Brief intro, " +
+  "specific reason for connecting, friendly and authentic, under 100 words. No fake flattery.";
 import { supabase } from '../lib/supabase';
 import { RootStackParamList } from '../lib/types';
 import { colors } from '../theme/colors';
@@ -244,11 +252,12 @@ function FormSheet({
 
     setGenerating(true);
     try {
-      const prompt = isClient
-        ? buildClientProposalPrompt(name.trim(), description.trim())
-        : buildConnectionProposalPrompt(name.trim(), description.trim());
+      const systemPrompt = isClient ? CLIENT_PROPOSAL_SYSTEM_PROMPT : CONNECTION_PROPOSAL_SYSTEM_PROMPT;
+      const userMessage = isClient 
+        ? `Client Name: ${name.trim()}\nProject/Service description: ${description.trim()}`
+        : `Their Name: ${name.trim()}\nWhat they do: ${description.trim()}`;
 
-      const text = await generateText(prompt);
+      const text = await callClaude(systemPrompt, userMessage);
 
       // Save to Supabase
       await supabase.from('proposals').insert({
@@ -272,11 +281,12 @@ function FormSheet({
   async function handleRegenerate() {
     setRegenerating(true);
     try {
-      const prompt =
-        latestType.current === 'client'
-          ? buildClientProposalPrompt(latestName.current, latestDesc.current)
-          : buildConnectionProposalPrompt(latestName.current, latestDesc.current);
-      const text = await generateText(prompt);
+      const isClient = latestType.current === 'client';
+      const systemPrompt = isClient ? CLIENT_PROPOSAL_SYSTEM_PROMPT : CONNECTION_PROPOSAL_SYSTEM_PROMPT;
+      const userMessage = isClient
+        ? `Client Name: ${latestName.current}\nProject/Service description: ${latestDesc.current}`
+        : `Their Name: ${latestName.current}\nWhat they do: ${latestDesc.current}`;
+      const text = await callClaude(systemPrompt, userMessage);
       setResult(text);
     } catch (e: any) {
       Alert.alert('Regeneration Failed', e?.message ?? 'Something went wrong.');
@@ -494,11 +504,12 @@ export function ProposalsScreen({
     if (!viewItem) return;
     setRegenerating(true);
     try {
-      const prompt =
-        viewItem.type === 'client'
-          ? buildClientProposalPrompt(viewItem.name, viewItem.description)
-          : buildConnectionProposalPrompt(viewItem.name, viewItem.description);
-      const text = await generateText(prompt);
+      const isClient = viewItem.type === 'client';
+      const systemPrompt = isClient ? CLIENT_PROPOSAL_SYSTEM_PROMPT : CONNECTION_PROPOSAL_SYSTEM_PROMPT;
+      const userMessage = isClient
+        ? `Client Name: ${viewItem.name}\nProject/Service description: ${viewItem.description}`
+        : `Their Name: ${viewItem.name}\nWhat they do: ${viewItem.description}`;
+      const text = await callClaude(systemPrompt, userMessage);
       setViewItem({ ...viewItem, generated_text: text });
     } catch (e: any) {
       Alert.alert('Failed', e?.message ?? 'Something went wrong.');

@@ -10,12 +10,39 @@ import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { ScreenHeader } from '../components/ScreenHeader';
-import {
-  buildColdEmailPrompt, buildInvoicePrompt,
-  buildLinkedInSystemPrompt, buildPricingPrompt,
-  generateText, generateChat, generateWithImage,
-  ChatMessage, DEFAULT_LINKEDIN_PROFILE,
-} from '../lib/gemini';
+import { callClaude, callClaudeWithImage } from '../lib/claude';
+
+const INVOICE_SYSTEM_PROMPT = 
+  "You are a professional invoice writer for Abdul Hadi Methath, a freelance developer from Kerala, India. " +
+  "Write clear professional invoice text based on client name and work done.";
+
+const PRICING_SYSTEM_PROMPT = 
+  "You are a pricing expert for freelance developers in India. Suggest fair pricing in Indian Rupees based on project description. " +
+  "Consider Kerala market rates. Give a range and explain why.";
+
+const COLD_EMAIL_SYSTEM_PROMPT = 
+  "You are a professional cold email writer for Abdul Hadi Methath, a freelance developer from Kerala, India. " +
+  "Write concise, professional cold emails with compelling subject lines. Get to the point fast.";
+
+const DEFAULT_LINKEDIN_PROFILE = {
+  name: 'Abdul Hadi Methath',
+  role: 'Student Developer & KSF Tech Lead',
+  location: 'Kerala, India',
+  experience:
+    'Tech Lead at Kerala Startup Fest (KSF), Built school management system at Caliph Life School, ' +
+    'Built Instagram inquiry automation using Cloodot, Built AHM — personal productivity app, ' +
+    'React Native, Supabase, Next.js, Claude API, Cloodot',
+  stack: 'React Native, Supabase, Next.js, Claude API',
+};
+
+function buildLinkedInSystemPrompt(profile: LIProfile): string {
+  return (
+    `You are a LinkedIn content expert for ${profile.name}, a 15 year old student developer and Tech Lead at Kerala Startup Fest from ${profile.location}. ` +
+    `His stack: ${profile.stack}. Experience: ${profile.experience}. ` +
+    `Write authentic, engaging LinkedIn posts in first person. Strong hook, real story, value for developers and startup community, ` +
+    `end with question or CTA, 5 relevant hashtags, 150-300 words, mobile friendly line breaks.`
+  );
+}
 import { RootStackParamList } from '../lib/types';
 import { colors } from '../theme/colors';
 import { sharedStyles } from '../theme/styles';
@@ -185,7 +212,8 @@ function InvoiceSheet({ visible, onClose }: { visible: boolean; onClose: () => v
     if (!client.trim() || !work.trim()) { Alert.alert('Required', 'Fill in all fields.'); return; }
     regen ? setRegenerating(true) : setLoading(true);
     try {
-      const text = await generateText(buildInvoicePrompt(client, work));
+      const userMessage = `Client Name: ${client}\nWork Done: ${work}`;
+      const text = await callClaude(INVOICE_SYSTEM_PROMPT, userMessage);
       setResult(text); setResultVisible(true);
     } catch (e: any) { Alert.alert('Error', e?.message ?? 'Something went wrong.'); }
     finally { regen ? setRegenerating(false) : setLoading(false); }
@@ -223,7 +251,8 @@ function PricingSheet({ visible, onClose }: { visible: boolean; onClose: () => v
     if (!desc.trim()) { Alert.alert('Required', 'Describe the project first.'); return; }
     regen ? setRegenerating(true) : setLoading(true);
     try {
-      const text = await generateText(buildPricingPrompt(desc));
+      const userMessage = `Project Description: ${desc}`;
+      const text = await callClaude(PRICING_SYSTEM_PROMPT, userMessage);
       setResult(text); setResultVisible(true);
     } catch (e: any) { Alert.alert('Error', e?.message ?? 'Something went wrong.'); }
     finally { regen ? setRegenerating(false) : setLoading(false); }
@@ -319,13 +348,19 @@ function LinkedInSheet({ visible, onClose }: { visible: boolean; onClose: () => 
         const base64 = await FileSystem.readAsStringAsync(pendingImage, {
           encoding: FileSystem.EncodingType.Base64,
         });
-        responseText = await generateWithImage(base64, 'image/jpeg', text || 'Write a LinkedIn post about this image', systemPrompt);
+        responseText = await callClaudeWithImage(
+          systemPrompt,
+          text || 'Write a LinkedIn post about this image',
+          base64,
+          'image/jpeg'
+        );
       } else {
-        const history: ChatMessage[] = messages
+        const historyText = messages
           .filter(m => m.id !== 'welcome')
-          .map(m => ({ role: m.role, parts: [{ text: m.text }] }));
-        history.push({ role: 'user', parts: [{ text }] });
-        responseText = await generateChat(history, systemPrompt);
+          .map(m => `${m.role === 'user' ? 'Hadi' : 'Assistant'}: ${m.text}`)
+          .join('\n');
+        const userMessage = historyText ? `${historyText}\nHadi: ${text}` : text;
+        responseText = await callClaude(systemPrompt, userMessage);
       }
 
       setMessages(prev => [...prev, {
@@ -555,7 +590,8 @@ function ColdEmailSheet({ visible, onClose }: { visible: boolean; onClose: () =>
     if (!recipient.trim() || !reason.trim()) { Alert.alert('Required', 'Fill in all fields.'); return; }
     regen ? setRegenerating(true) : setLoading(true);
     try {
-      const text = await generateText(buildColdEmailPrompt(recipient, reason));
+      const userMessage = `Recipient: ${recipient}\nReason/purpose: ${reason}`;
+      const text = await callClaude(COLD_EMAIL_SYSTEM_PROMPT, userMessage);
       setResult(text); setResultVisible(true);
     } catch (e: any) { Alert.alert('Error', e?.message ?? 'Something went wrong.'); }
     finally { regen ? setRegenerating(false) : setLoading(false); }

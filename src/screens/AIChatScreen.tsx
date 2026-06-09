@@ -8,8 +8,18 @@ import {
 import { Feather } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
-import { AI_CHAT_SYSTEM, ChatMessage, generateChat, generateWithImage } from '../lib/gemini';
+import { callClaude, callClaudeWithImage } from '../lib/claude';
 import { RootStackParamList } from '../lib/types';
+
+const AI_CHAT_SYSTEM = 
+  "You are a personal AI assistant inside AHM, " +
+  "the personal productivity app of Abdul Hadi " +
+  "Methath, a 15 year old student developer from " +
+  "Kerala, India. He is Tech Lead at Kerala Startup " +
+  "Fest, builds with React Native, Supabase, " +
+  "Next.js. Be direct, practical, casual like a " +
+  "smart friend who is also a senior developer. " +
+  "No fluff.";
 import { colors } from '../theme/colors';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -127,14 +137,20 @@ export function AIChatScreen({ navigation }: NativeStackScreenProps<RootStackPar
       if (pendingImage) {
         // Vision call
         const base64 = await uriToBase64(pendingImage);
-        responseText = await generateWithImage(base64, 'image/jpeg', text || 'What do you see in this image?', AI_CHAT_SYSTEM);
+        responseText = await callClaudeWithImage(
+          AI_CHAT_SYSTEM,
+          text || 'What do you see in this image?',
+          base64,
+          'image/jpeg'
+        );
       } else {
         // Build chat history (skip welcome)
-        const history: ChatMessage[] = messages
+        const historyText = messages
           .filter(m => m.id !== 'welcome')
-          .map(m => ({ role: m.role, parts: [{ text: m.text }] }));
-        history.push({ role: 'user', parts: [{ text }] });
-        responseText = await generateChat(history, AI_CHAT_SYSTEM);
+          .map(m => `${m.role === 'user' ? 'Hadi' : 'Assistant'}: ${m.text}`)
+          .join('\n');
+        const userMessage = historyText ? `${historyText}\nHadi: ${text}` : text;
+        responseText = await callClaude(AI_CHAT_SYSTEM, userMessage);
       }
 
       const aiMsg: UIMessage = {
