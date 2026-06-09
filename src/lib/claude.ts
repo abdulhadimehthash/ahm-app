@@ -1,4 +1,8 @@
-const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
+import { Platform } from 'react-native';
+
+const CLAUDE_API_URL = Platform.OS === 'web'
+  ? '/api/claude'
+  : 'https://api.anthropic.com/v1/messages';
 
 export async function callClaude(
   systemPrompt: string,
@@ -9,8 +13,10 @@ export async function callClaude(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.EXPO_PUBLIC_CLAUDE_KEY || '',
-        'anthropic-version': '2023-06-01'
+        ...(Platform.OS !== 'web' ? {
+          'x-api-key': process.env.EXPO_PUBLIC_CLAUDE_KEY || '',
+          'anthropic-version': '2023-06-01'
+        } : {})
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
@@ -66,8 +72,10 @@ export async function callClaudeWithImage(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.EXPO_PUBLIC_CLAUDE_KEY || '',
-        'anthropic-version': '2023-06-01'
+        ...(Platform.OS !== 'web' ? {
+          'x-api-key': process.env.EXPO_PUBLIC_CLAUDE_KEY || '',
+          'anthropic-version': '2023-06-01'
+        } : {})
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
