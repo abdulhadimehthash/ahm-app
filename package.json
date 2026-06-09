@@ -9,8 +9,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:apk": "eas build -p android --profile preview",
-    "setup:db": "node scripts/setup-database.mjs",
-    "setup:proposals": "node scripts/setup-proposals.mjs"
+    "setup:db": "node scripts/setup-database.mjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",
