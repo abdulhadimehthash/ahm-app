@@ -20,7 +20,38 @@ export function LockScreen({ navigation }: NativeStackScreenProps<RootStackParam
     AsyncStorage.getItem(PIN_KEY).then((stored) => {
       if (stored) setAccessPin(stored);
     });
+
+    // Handle auto-lock check
+    checkSession();
   }, []);
+
+  async function checkSession() {
+    try {
+      const sessionVal = await AsyncStorage.getItem('ahm_unlock_session');
+      const storedLockTimer = await AsyncStorage.getItem('ahm_lock_timer') || 'Immediately';
+      
+      if (sessionVal && storedLockTimer !== 'Immediately') {
+        const diff = Date.now() - parseInt(sessionVal, 10);
+        let skip = false;
+        
+        if (storedLockTimer === 'Never') {
+          skip = true;
+        } else if (storedLockTimer === '5m' && diff < 5 * 60 * 1000) {
+          skip = true;
+        } else if (storedLockTimer === '15m' && diff < 15 * 60 * 1000) {
+          skip = true;
+        } else if (storedLockTimer === '1h' && diff < 60 * 60 * 1000) {
+          skip = true;
+        }
+        
+        if (skip) {
+          navigation.replace('Home');
+        }
+      }
+    } catch (e) {
+      console.error('Failed to check lock session', e);
+    }
+  }
 
   async function saveSession() {
     await AsyncStorage.setItem('ahm_unlock_session', Date.now().toString());

@@ -57,6 +57,7 @@ export function RemindersScreen({ navigation }: NativeStackScreenProps<RootStack
   const { showUndo } = useUndo();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
   const [description, setDescription] = useState('');
@@ -77,6 +78,12 @@ export function RemindersScreen({ navigation }: NativeStackScreenProps<RootStack
     if (error) { Alert.alert('Error', error.message); return; }
     setReminders(data ?? []);
   }
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await loadReminders();
+    setRefreshing(false);
+  }, []);
 
   async function saveReminder() {
     if (!description.trim()) { Alert.alert('Missing', 'Enter a reminder description.'); return; }
@@ -175,6 +182,8 @@ export function RemindersScreen({ navigation }: NativeStackScreenProps<RootStack
             keyExtractor={item => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 120 }}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <Text style={styles.emptyIcon}>🔔</Text>

@@ -15,7 +15,7 @@ function getGreeting(): string {
   return 'Good Evening, Hadi 👋';
 }
 
-type HomeRoute = Exclude<keyof RootStackParamList, 'Lock' | 'Home' | 'DayDetail'>;
+type HomeRoute = Exclude<keyof RootStackParamList, 'Lock' | 'Home'>;
 
 interface Item {
   label: string;
@@ -24,18 +24,13 @@ interface Item {
 }
 
 const items: Item[] = [
-  { label: 'Day',         route: 'Day',        icon: 'sun'         },
   { label: 'Passwords',   route: 'Passwords',  icon: 'lock'        },
   { label: 'Projects',    route: 'Projects',   icon: 'folder'      },
   { label: 'Money',       route: 'Money',      icon: 'dollar-sign' },
-  { label: 'Tasks',       route: 'Tasks',      icon: 'check-square'},
   { label: 'Finance',     route: 'Finance',    icon: 'bar-chart-2' },
   { label: 'Calendar',    route: 'Calendar',   icon: 'calendar'    },
-  { label: 'Daily',       route: 'Daily',      icon: 'sun'         },
   { label: 'Reminders',   route: 'Reminders',  icon: 'bell'        },
-  { label: 'Notes',       route: 'Notes',      icon: 'file-text'   },
   { label: 'Documents',   route: 'Documents',  icon: 'file'        },
-  { label: 'Proposals',   route: 'Proposals',  icon: 'send'        },
   { label: 'AI',          route: 'AI',         icon: 'cpu'         },
   { label: 'Copy Vault',  route: 'CopyVault',  icon: 'copy'        },
   { label: 'Contacts',    route: 'Contacts',   icon: 'users'       },

@@ -80,6 +80,7 @@ export function CopyVaultScreen({ navigation }: NativeStackScreenProps<RootStack
   const [items, setItems] = useState<CopyVaultItem[]>([]);
   const [filter, setFilter] = useState<CopyVaultCategory | 'All'>('All');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
   // Form
@@ -132,6 +133,12 @@ export function CopyVaultScreen({ navigation }: NativeStackScreenProps<RootStack
       setLoading(false);
     }
   }
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadItems();
+    setRefreshing(false);
+  }, []);
 
   async function saveItem() {
     if (!label.trim()) {
@@ -210,6 +217,8 @@ export function CopyVaultScreen({ navigation }: NativeStackScreenProps<RootStack
             keyExtractor={(i) => i.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 120 }}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             ListEmptyComponent={
               <View style={styles.empty}>
                 <Text style={styles.emptyIcon}>📋</Text>

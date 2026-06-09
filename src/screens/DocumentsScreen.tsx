@@ -103,6 +103,7 @@ function DocViewer({ doc, onClose, onDelete }: { doc: Doc | null; onClose: () =>
 export function DocumentsScreen({ navigation }: NativeStackScreenProps<RootStackParamList, 'Documents'>) {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [viewDoc, setViewDoc] = useState<Doc | null>(null);
@@ -139,6 +140,12 @@ export function DocumentsScreen({ navigation }: NativeStackScreenProps<RootStack
     if (error) { Alert.alert('Error', error.message); return; }
     setDocs(data ?? []);
   }
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await loadDocs();
+    setRefreshing(false);
+  }, []);
 
   // ── Pick ONE photo from gallery (call multiple times for more) ──
   async function pickFromGallery() {
@@ -307,6 +314,8 @@ export function DocumentsScreen({ navigation }: NativeStackScreenProps<RootStack
             keyExtractor={item => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 120 }}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <Text style={styles.emptyIcon}>📄</Text>

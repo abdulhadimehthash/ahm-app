@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   ActivityIndicator,
@@ -92,6 +92,7 @@ export function FinanceScreen({ navigation }: NativeStackScreenProps<RootStackPa
   const [expenses, setExpenses] = useState<ExpenseEntry[]>([]);
   const [income, setIncome] = useState<FinanceEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
 
@@ -113,6 +114,12 @@ export function FinanceScreen({ navigation }: NativeStackScreenProps<RootStackPa
     if (expRes.data) setExpenses(expRes.data.map((e) => ({ ...e, amount: Number(e.amount) })));
     if (incRes.data) setIncome(incRes.data.map((e) => ({ ...e, amount: Number(e.amount) })));
   }
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadAll();
+    setRefreshing(false);
+  }, []);
 
   // Totals
   const totalEarned = useMemo(() => income.reduce((s, e) => s + e.amount, 0), [income]);
@@ -209,6 +216,8 @@ export function FinanceScreen({ navigation }: NativeStackScreenProps<RootStackPa
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>💸</Text>
@@ -228,10 +237,10 @@ export function FinanceScreen({ navigation }: NativeStackScreenProps<RootStackPa
                     {net >= 0 ? '+' : '-'}{fmt(net)}
                   </Text>
                   <View style={styles.summaryRow}>
-                    <View style={styles.summaryItem}>
-                      <Text style={styles.summaryLabel}>Earned</Text>
+                    <Pressable onPress={() => navigation.navigate('Money')} style={styles.summaryItem}>
+                      <Text style={styles.summaryLabel}>Earned ↗</Text>
                       <Text style={[styles.summaryValue, { color: colors.green }]}>{fmt(totalEarned)}</Text>
-                    </View>
+                    </Pressable>
                     <View style={styles.summaryDivider} />
                     <View style={styles.summaryItem}>
                       <Text style={styles.summaryLabel}>Spent</Text>
@@ -295,18 +304,33 @@ export function FinanceScreen({ navigation }: NativeStackScreenProps<RootStackPa
           keyboardType="decimal-pad"
         />
         <Text style={sharedStyles.label}>Date</Text>
-        <Pressable onPress={() => setShowDatePicker(true)} style={styles.dateButton}>
-          <Text style={styles.dateButtonText}>{formatDate(toIsoDate(date))}</Text>
-        </Pressable>
-        {showDatePicker && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            maximumDate={new Date()}
-            onChange={onDateChange}
-            textColor={colors.white}
-          />
+        {Platform.OS === 'web' ? (
+          <View style={[styles.dateButton, { marginBottom: 20 }]}>
+            {/* @ts-ignore */}
+            <input
+              type="date"
+              value={toIsoDate(date)}
+              max={toIsoDate(new Date())}
+              onChange={(e: any) => { if (e.target.value) setDate(new Date(e.target.value + 'T00:00:00')); }}
+              style={{ background: 'transparent', border: 'none', color: '#FFFFFF', fontSize: 16, fontWeight: 600, width: '100%', outline: 'none', cursor: 'pointer' }}
+            />
+          </View>
+        ) : (
+          <>
+            <Pressable onPress={() => setShowDatePicker(true)} style={styles.dateButton}>
+              <Text style={styles.dateButtonText}>{formatDate(toIsoDate(date))}</Text>
+            </Pressable>
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                maximumDate={new Date()}
+                onChange={onDateChange}
+                textColor={colors.white}
+              />
+            )}
+          </>
         )}
         <Pressable
           onPress={saveExpense}

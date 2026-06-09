@@ -23,13 +23,15 @@ import { FormModal } from '../components/FormModal';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { useUndo } from '../lib/undoManager';
 import { supabase } from '../lib/supabase';
-import { ContactCategory, ContactEntry, RootStackParamList } from '../lib/types';
+import { ContactCategory, ContactEntry, BirthdayEntry, RootStackParamList } from '../lib/types';
 import { colors } from '../theme/colors';
 import { sharedStyles } from '../theme/styles';
+import { scheduleAllBirthdayNotifications, cancelAllBirthdayNotifications } from '../lib/notifications';
 
 const CATEGORIES: ContactCategory[] = ['Family', 'Friend', 'Client', 'Collaborator', 'School', 'KSF'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-// ── Swipe row ───────────────────────────────────────────────────────────────
+// Swipe row for deletion
 function SwipeRow({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
   const tx = useRef(new Animated.Value(0)).current;
   const pan = useRef(
@@ -58,7 +60,7 @@ function SwipeRow({ children, onDelete }: { children: React.ReactNode; onDelete:
   );
 }
 
-// ── Phone contacts picker modal ─────────────────────────────────────────────
+// Phone contacts picker modal
 function PhoneContactsPicker({
   visible,
   onClose,
@@ -173,31 +175,46 @@ function PhoneContactsPicker({
   );
 }
 
-// ── Main screen ─────────────────────────────────────────────────────────────
 export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackParamList, 'Contacts'>) {
   const { showUndo } = useUndo();
-  const [contacts, setContacts] = useState<ContactEntry[]>([]);
-  const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState<'contacts' | 'birthdays'>('contacts');
   const [loading, setLoading] = useState(true);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState('');
+
+  // Contacts States
+  const [contacts, setContacts] = useState<ContactEntry[]>([]);
+  const [contactModalVisible, setContactModalVisible] = useState(false);
   const [importVisible, setImportVisible] = useState(false);
+  const [cName, setCName] = useState('');
+  const [cPhone, setCPhone] = useState('');
+  const [cEmail, setCEmail] = useState('');
+  const [cCategory, setCCategory] = useState<ContactCategory>('Friend');
+  const [cNotes, setCNotes] = useState('');
 
-  // Form
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [category, setCategory] = useState<ContactCategory>('Friend');
-  const [notes, setNotes] = useState('');
+  // Birthdays States
+  const [birthdays, setBirthdays] = useState<BirthdayEntry[]>([]);
+  const [birthdayModalVisible, setBirthdayModalVisible] = useState(false);
+  const [bName, setBName] = useState('');
+  const [bDay, setBDay] = useState('1');
+  const [bMonth, setBMonth] = useState('1');
+  const [bNote, setBNote] = useState('');
 
-  useEffect(() => { loadContacts(); }, []);
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    setLoading(true);
+    await Promise.all([loadContacts(), loadBirthdays()]);
+    setLoading(false);
+  }
 
   async function loadContacts() {
-    setLoading(true);
     const { data, error } = await supabase
       .from('contacts')
       .select('*')
       .order('name', { ascending: true });
-    setLoading(false);
     if (error) {
       Alert.alert('Load failed', error.message);
     } else {
@@ -205,38 +222,115 @@ export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackP
     }
   }
 
+  async function loadBirthdays() {
+    const { data, error } = await supabase
+      .from('birthdays')
+      .select('*')
+      .order('month', { ascending: true })
+      .order('day', { ascending: true });
+    if (error) {
+      Alert.alert('Load failed', error.message);
+    } else {
+      setBirthdays(data ?? []);
+    }
+  }
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([loadContacts(), loadBirthdays()]);
+    setRefreshing(false);
+  }, []);
+
+  // Save Contact
   async function saveContact() {
-    if (!name.trim() || !phone.trim()) {
+    if (!cName.trim() || !cPhone.trim()) {
       Alert.alert('Missing details', 'Name and phone are required.');
       return;
     }
     const { error } = await supabase.from('contacts').insert({
-      name: name.trim(),
-      phone: phone.trim(),
-      email: email.trim() || null,
-      category,
-      notes: notes.trim() || null,
+      name: cName.trim(),
+      phone: cPhone.trim(),
+      email: cEmail.trim() || null,
+      category: cCategory,
+      notes: cNotes.trim() || null,
     });
     if (error) {
       Alert.alert('Save failed', error.message);
       return;
     }
-    resetForm();
-    setModalVisible(false);
+    resetContactForm();
+    setContactModalVisible(false);
     await loadContacts();
   }
 
-  function resetForm() {
-    setName(''); setPhone(''); setEmail(''); setCategory('Friend'); setNotes('');
+  function resetContactForm() {
+    setCName(''); setCPhone(''); setCEmail(''); setCCategory('Friend'); setCNotes('');
   }
 
-  function handleDelete(contact: ContactEntry) {
+  // Save Birthday
+  async function saveBirthday() {
+    if (!bName.trim()) {
+      Alert.alert('Missing details', 'Name is required.');
+      return;
+    }
+    const dayNum = parseInt(bDay, 10);
+    const monthNum = parseInt(bMonth, 10);
+
+    const { data, error } = await supabase.from('birthdays').insert({
+      name: bName.trim(),
+      day: dayNum,
+      month: monthNum,
+      note: bNote.trim() || null
+    }).select().single();
+
+    if (error || !data) {
+      Alert.alert('Save failed', error?.message || 'Failed to save birthday');
+      return;
+    }
+
+    // Schedule birthday notifications
+    try {
+      await scheduleAllBirthdayNotifications(data);
+    } catch (e) {
+      console.error('Failed to schedule birthday notifications:', e);
+    }
+
+    resetBirthdayForm();
+    setBirthdayModalVisible(false);
+    await loadBirthdays();
+  }
+
+  function resetBirthdayForm() {
+    setBName(''); setBDay('1'); setBMonth('1'); setBNote('');
+  }
+
+  // Delete Contact
+  function handleDeleteContact(contact: ContactEntry) {
     setContacts((prev) => prev.filter((c) => c.id !== contact.id));
     showUndo({
       label: `Deleted ${contact.name}`,
       onRestore: async () => setContacts((prev) => [contact, ...prev].sort((a, b) => a.name.localeCompare(b.name))),
       onConfirmDelete: async () => {
         await supabase.from('contacts').delete().eq('id', contact.id);
+      },
+    });
+  }
+
+  // Delete Birthday
+  function handleDeleteBirthday(bd: BirthdayEntry) {
+    // Cancel notifications immediately
+    cancelAllBirthdayNotifications(bd.id);
+    
+    setBirthdays((prev) => prev.filter((b) => b.id !== bd.id));
+    showUndo({
+      label: `Deleted ${bd.name}'s birthday`,
+      onRestore: async () => {
+        setBirthdays((prev) => [...prev, bd].sort((a, b) => a.month - b.month || a.day - b.day));
+        // Re-schedule notifications
+        await scheduleAllBirthdayNotifications(bd);
+      },
+      onConfirmDelete: async () => {
+        await supabase.from('birthdays').delete().eq('id', bd.id);
       },
     });
   }
@@ -263,11 +357,17 @@ export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackP
     Linking.openURL(`tel:${cleaned}`);
   }
 
-  const displayed = contacts.filter(
+  const displayedContacts = contacts.filter(
     (c) =>
       !search ||
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.phone.includes(search)
+  );
+
+  const displayedBirthdays = birthdays.filter(
+    (b) =>
+      !search ||
+      b.name.toLowerCase().includes(search.toLowerCase())
   );
 
   const catColor: Record<ContactCategory, string> = {
@@ -286,15 +386,33 @@ export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackP
           title="Contacts"
           navigation={navigation}
           action={
-            <Pressable
-              onPress={() => setImportVisible(true)}
-              style={({ pressed }) => [styles.importBtn, pressed && { opacity: 0.7 }]}
-            >
-              <Feather name="download" size={14} color={colors.white} />
-              <Text style={styles.importBtnText}>Import</Text>
-            </Pressable>
+            activeTab === 'contacts' ? (
+              <Pressable
+                onPress={() => setImportVisible(true)}
+                style={({ pressed }) => [styles.importBtn, pressed && { opacity: 0.7 }]}
+              >
+                <Feather name="download" size={14} color={colors.white} />
+                <Text style={styles.importBtnText}>Import</Text>
+              </Pressable>
+            ) : null
           }
         />
+
+        {/* Segmented Control */}
+        <View style={styles.segmentContainer}>
+          <Pressable
+            onPress={() => setActiveTab('contacts')}
+            style={[styles.segmentButton, activeTab === 'contacts' && styles.activeSegmentButton]}
+          >
+            <Text style={[styles.segmentText, activeTab === 'contacts' && styles.activeSegmentText]}>Contacts</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setActiveTab('birthdays')}
+            style={[styles.segmentButton, activeTab === 'birthdays' && styles.activeSegmentButton]}
+          >
+            <Text style={[styles.segmentText, activeTab === 'birthdays' && styles.activeSegmentText]}>Birthdays</Text>
+          </Pressable>
+        </View>
 
         {/* Search bar */}
         <View style={styles.searchWrap}>
@@ -302,7 +420,7 @@ export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackP
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search contacts..."
+            placeholder={activeTab === 'contacts' ? "Search contacts..." : "Search birthdays..."}
             placeholderTextColor={colors.placeholder}
             style={styles.searchInput}
           />
@@ -317,12 +435,14 @@ export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackP
           <View style={{ flex: 1, justifyContent: 'center' }}>
             <ActivityIndicator color={colors.white} />
           </View>
-        ) : (
+        ) : activeTab === 'contacts' ? (
           <FlatList
-            data={displayed}
+            data={displayedContacts}
             keyExtractor={(c) => c.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 120 }}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             ListEmptyComponent={
               <View style={styles.empty}>
                 <Text style={styles.emptyIcon}>👥</Text>
@@ -335,7 +455,7 @@ export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackP
               </View>
             }
             renderItem={({ item }) => (
-              <SwipeRow onDelete={() => handleDelete(item)}>
+              <SwipeRow onDelete={() => handleDeleteContact(item)}>
                 <View style={styles.card}>
                   <View style={[styles.avatar, { backgroundColor: catColor[item.category] + '22', borderColor: catColor[item.category] + '44' }]}>
                     <Text style={[styles.avatarText, { color: catColor[item.category] }]}>
@@ -364,31 +484,74 @@ export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackP
               </SwipeRow>
             )}
           />
+        ) : (
+          <FlatList
+            data={displayedBirthdays}
+            keyExtractor={(b) => b.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 120 }}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            ListEmptyComponent={
+              <View style={styles.empty}>
+                <Text style={styles.emptyIcon}>🎂</Text>
+                <Text style={styles.emptyTitle}>
+                  {search ? 'No results' : 'No birthdays yet'}
+                </Text>
+                <Text style={styles.emptySub}>
+                  {search ? 'Try a different search' : 'Tap + to add a birthday'}
+                </Text>
+              </View>
+            }
+            renderItem={({ item }) => (
+              <SwipeRow onDelete={() => handleDeleteBirthday(item)}>
+                <View style={styles.card}>
+                  <View style={[styles.avatar, { backgroundColor: 'rgba(236, 72, 153, 0.15)', borderColor: 'rgba(236, 72, 153, 0.3)' }]}>
+                    <Text style={[styles.avatarText, { color: '#EC4899' }]}>🎂</Text>
+                  </View>
+                  <View style={styles.cardInfo}>
+                    <Text style={styles.cardName}>{item.name}</Text>
+                    <View style={styles.catTag}>
+                      <Text style={[styles.catTagText, { color: '#EC4899' }]}>
+                        {item.day} {MONTHS[item.month - 1]}
+                      </Text>
+                    </View>
+                    {item.note ? (
+                      <Text style={styles.cardNotes} numberOfLines={1}>{item.note}</Text>
+                    ) : null}
+                  </View>
+                  <View style={styles.giftIconContainer}>
+                    <Feather name="gift" size={20} color="#EC4899" />
+                  </View>
+                </View>
+              </SwipeRow>
+            )}
+          />
         )}
       </View>
 
-      <FloatingButton onPress={() => setModalVisible(true)} />
+      <FloatingButton onPress={() => activeTab === 'contacts' ? setContactModalVisible(true) : setBirthdayModalVisible(true)} />
 
       {/* Add contact form */}
-      <FormModal visible={modalVisible} title="Add Contact" onClose={() => { resetForm(); setModalVisible(false); }}>
+      <FormModal visible={contactModalVisible} title="Add Contact" onClose={() => { resetContactForm(); setContactModalVisible(false); }}>
         <TextInput
-          value={name}
-          onChangeText={setName}
+          value={cName}
+          onChangeText={setCName}
           placeholder="Full Name"
           placeholderTextColor={colors.placeholder}
           style={[sharedStyles.input, { marginBottom: 12 }]}
         />
         <TextInput
-          value={phone}
-          onChangeText={setPhone}
+          value={cPhone}
+          onChangeText={setCPhone}
           placeholder="Phone Number"
           placeholderTextColor={colors.placeholder}
           keyboardType="phone-pad"
           style={[sharedStyles.input, { marginBottom: 12 }]}
         />
         <TextInput
-          value={email}
-          onChangeText={setEmail}
+          value={cEmail}
+          onChangeText={setCEmail}
           placeholder="Email (optional)"
           placeholderTextColor={colors.placeholder}
           keyboardType="email-address"
@@ -398,8 +561,8 @@ export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackP
         <Text style={sharedStyles.label}>Category</Text>
         <View style={styles.pickerWrap}>
           <Picker
-            selectedValue={category}
-            onValueChange={(v) => setCategory(v as ContactCategory)}
+            selectedValue={cCategory}
+            onValueChange={(v) => setCCategory(v as ContactCategory)}
             dropdownIconColor={colors.white}
             style={styles.picker}
           >
@@ -414,8 +577,8 @@ export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackP
           </Picker>
         </View>
         <TextInput
-          value={notes}
-          onChangeText={setNotes}
+          value={cNotes}
+          onChangeText={setCNotes}
           placeholder="Notes (optional)"
           placeholderTextColor={colors.placeholder}
           style={[sharedStyles.input, { minHeight: 60, paddingTop: 12, marginBottom: 12 }]}
@@ -431,6 +594,63 @@ export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackP
         </Pressable>
       </FormModal>
 
+      {/* Add Birthday Form */}
+      <FormModal visible={birthdayModalVisible} title="Add Birthday" onClose={() => { resetBirthdayForm(); setBirthdayModalVisible(false); }}>
+        <TextInput
+          value={bName}
+          onChangeText={setBName}
+          placeholder="Full Name"
+          placeholderTextColor={colors.placeholder}
+          style={[sharedStyles.input, { marginBottom: 12 }]}
+        />
+
+        <Text style={sharedStyles.label}>Month</Text>
+        <View style={styles.pickerWrap}>
+          <Picker
+            selectedValue={bMonth}
+            onValueChange={(v) => setBMonth(v)}
+            dropdownIconColor={colors.white}
+            style={styles.picker}
+          >
+            {MONTHS.map((m, idx) => (
+              <Picker.Item key={m} label={m} value={String(idx + 1)} color={Platform.OS === 'ios' ? colors.white : undefined} />
+            ))}
+          </Picker>
+        </View>
+
+        <Text style={sharedStyles.label}>Day</Text>
+        <View style={styles.pickerWrap}>
+          <Picker
+            selectedValue={bDay}
+            onValueChange={(v) => setBDay(v)}
+            dropdownIconColor={colors.white}
+            style={styles.picker}
+          >
+            {Array.from({ length: 31 }, (_, i) => String(i + 1)).map((d) => (
+              <Picker.Item key={d} label={d} value={d} color={Platform.OS === 'ios' ? colors.white : undefined} />
+            ))}
+          </Picker>
+        </View>
+
+        <TextInput
+          value={bNote}
+          onChangeText={setBNote}
+          placeholder="Notes / Gift Ideas (optional)"
+          placeholderTextColor={colors.placeholder}
+          style={[sharedStyles.input, { minHeight: 60, paddingTop: 12, marginBottom: 12 }]}
+          multiline
+          numberOfLines={2}
+          textAlignVertical="top"
+        />
+
+        <Pressable
+          onPress={saveBirthday}
+          style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.85 }]}
+        >
+          <Text style={styles.saveBtnText}>Save Birthday</Text>
+        </Pressable>
+      </FormModal>
+
       {/* Phone contacts import picker */}
       <PhoneContactsPicker
         visible={importVisible}
@@ -442,6 +662,32 @@ export function ContactsScreen({ navigation }: NativeStackScreenProps<RootStackP
 }
 
 const styles = StyleSheet.create({
+  segmentContainer: {
+    flexDirection: 'row',
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 4,
+    marginBottom: 16,
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  activeSegmentButton: {
+    backgroundColor: colors.white,
+  },
+  segmentText: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  activeSegmentText: {
+    color: colors.black,
+  },
   importBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -530,4 +776,10 @@ const styles = StyleSheet.create({
   phoneContactInfo: { flex: 1 },
   phoneContactName: { color: colors.white, fontSize: 14, fontWeight: '600' },
   phoneContactPhone: { color: colors.muted, fontSize: 12, marginTop: 2 },
+  giftIconContainer: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  }
 });

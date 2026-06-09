@@ -137,10 +137,10 @@ export async function scheduleDailyMorning() {
     identifier: 'daily_morning',
     content: {
       title: 'Good Morning Hadi 👋',
-      body: 'Open AHM to see your tasks and plans for today',
+      body: 'Open AHM to see your plans for today',
       sound: 'default',
       priority: Notifications.AndroidNotificationPriority.MAX,
-      data: { id: 'daily_morning', screen: 'Tasks' },
+      data: { id: 'daily_morning', screen: 'Calendar' },
     },
     trigger: {
       hour: 9,
@@ -162,10 +162,10 @@ export async function scheduleDailyAfternoon() {
     identifier: 'daily_afternoon',
     content: {
       title: 'AHM Check In ⚡',
-      body: 'How are your tasks going today?',
+      body: 'How is your day going?',
       sound: 'default',
       priority: Notifications.AndroidNotificationPriority.MAX,
-      data: { id: 'daily_afternoon', screen: 'Tasks' },
+      data: { id: 'daily_afternoon', screen: 'Calendar' },
     },
     trigger: {
       hour: 15,
@@ -179,53 +179,13 @@ export async function scheduleDailyAfternoon() {
 
 // ── Shared Domain-Specific Scheduling & Cancellation Helpers ──
 
-// Tasks
+// Tasks (Obsolete but kept for signature compatibility)
 export async function scheduleAllTaskNotifications(task: { id: string; name: string; finish_date: string }) {
-  if (!task.finish_date) return;
-  await cancelTaskNotifications(task.id);
-  
-  const [year, month, day] = task.finish_date.split('-').map(Number);
-  const dueDateObj = new Date(year, month - 1, day);
-  
-  // 1. Day of at 9am IST
-  const notifyDate = fromZonedTime(`${task.finish_date} 09:00:00`, IST_TIMEZONE);
-  await scheduleNotification({
-    id: `task_${task.id}`,
-    title: '📋 Task Due Today',
-    body: task.name,
-    dateIST: notifyDate,
-    screen: 'Tasks',
-  });
-  
-  // 2. 1 day before at 9am IST
-  const dayBeforeObj = new Date(dueDateObj.getTime() - 24 * 60 * 60 * 1000);
-  const dayBeforeStr = `${dayBeforeObj.getFullYear()}-${String(dayBeforeObj.getMonth() + 1).padStart(2, '0')}-${String(dayBeforeObj.getDate()).padStart(2, '0')}`;
-  const dayBefore = fromZonedTime(`${dayBeforeStr} 09:00:00`, IST_TIMEZONE);
-  await scheduleNotification({
-    id: `task_before_${task.id}`,
-    title: '⚠️ Task Due Tomorrow',
-    body: task.name,
-    dateIST: dayBefore,
-    screen: 'Tasks',
-  });
-  
-  // 3. 3 days before at 9am IST
-  const threeDaysBeforeObj = new Date(dueDateObj.getTime() - 3 * 24 * 60 * 60 * 1000);
-  const threeDaysBeforeStr = `${threeDaysBeforeObj.getFullYear()}-${String(threeDaysBeforeObj.getMonth() + 1).padStart(2, '0')}-${String(threeDaysBeforeObj.getDate()).padStart(2, '0')}`;
-  const threeDaysBefore = fromZonedTime(`${threeDaysBeforeStr} 09:00:00`, IST_TIMEZONE);
-  await scheduleNotification({
-    id: `task_3days_${task.id}`,
-    title: '📅 Task Due in 3 Days',
-    body: task.name,
-    dateIST: threeDaysBefore,
-    screen: 'Tasks',
-  });
+  // Obsolete - Tasks screen deleted
 }
 
 export async function cancelTaskNotifications(taskId: string) {
-  await cancelNotification(`task_${taskId}`);
-  await cancelNotification(`task_before_${taskId}`);
-  await cancelNotification(`task_3days_${taskId}`);
+  // Obsolete
 }
 
 // Day Plans
@@ -240,7 +200,7 @@ export async function scheduleAllDayPlanNotifications(plan: { id: string; title:
     title: '📅 Planned: ' + plan.title,
     body: plan.details || 'Time for your planned activity',
     dateIST: planDateTime,
-    screen: 'Day',
+    screen: 'Calendar',
   });
   
   // 2. 10 minutes early
@@ -250,7 +210,7 @@ export async function scheduleAllDayPlanNotifications(plan: { id: string; title:
     body: plan.title,
     dateIST: planDateTime,
     minutesBefore: 10,
-    screen: 'Day',
+    screen: 'Calendar',
   });
   
   // 3. 8am on the day
@@ -260,7 +220,7 @@ export async function scheduleAllDayPlanNotifications(plan: { id: string; title:
     title: '🌅 Today: ' + plan.title,
     body: `Planned for ${plan.plan_time}`,
     dateIST: morningReminder,
-    screen: 'Day',
+    screen: 'Calendar',
   });
 }
 
@@ -286,7 +246,7 @@ export async function scheduleAllBirthdayNotifications(bd: { id: string; name: s
       title: '🎂 Birthday Today!',
       body: `Today is ${bd.name}'s birthday!`,
       dateIST: birthdayDate,
-      screen: 'Daily',
+      screen: 'Contacts',
     });
     
     // 1 day before
@@ -296,7 +256,7 @@ export async function scheduleAllBirthdayNotifications(bd: { id: string; name: s
       title: '🎁 Birthday Tomorrow',
       body: `Tomorrow is ${bd.name}'s birthday!`,
       dateIST: dayBefore,
-      screen: 'Daily',
+      screen: 'Contacts',
     });
   }
 }

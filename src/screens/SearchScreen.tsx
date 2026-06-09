@@ -27,8 +27,8 @@ export function SearchScreen({ navigation }: NativeStackScreenProps<RootStackPar
     setLoading(true);
     const term = q.trim().toLowerCase();
 
-    const [tasks, projects, passwords, expenses, meetings, reminders] = await Promise.all([
-      supabase.from('tasks').select('id,name,finish_date'),
+    const [dayPlans, projects, passwords, expenses, meetings, reminders] = await Promise.all([
+      supabase.from('day_plans').select('id,title,plan_date,plan_time,details'),
       supabase.from('projects').select('id,name,domain,description'),
       supabase.from('password_entries').select('id,username,category'),
       supabase.from('expenses').select('id,name,amount,date'),
@@ -38,8 +38,8 @@ export function SearchScreen({ navigation }: NativeStackScreenProps<RootStackPar
 
     const all: Result[] = [];
 
-    (tasks.data ?? []).filter(t => t.name.toLowerCase().includes(term)).forEach(t =>
-      all.push({ id:t.id, section:'Tasks', title:t.name, subtitle:`Due ${t.finish_date}` })
+    (dayPlans.data ?? []).filter(p => p.title.toLowerCase().includes(term) || (p.details && p.details.toLowerCase().includes(term))).forEach(p =>
+      all.push({ id:p.id, section:'Calendar', title:p.title, subtitle:`${p.plan_date} · ${p.plan_time}` })
     );
     (projects.data ?? []).filter(p => p.name.toLowerCase().includes(term)||p.domain.toLowerCase().includes(term)||p.description.toLowerCase().includes(term)).forEach(p =>
       all.push({ id:p.id, section:'Projects', title:p.name, subtitle:p.domain })

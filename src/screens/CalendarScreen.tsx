@@ -1,25 +1,42 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
-  ActivityIndicator, Alert, FlatList, PanResponder, Platform,
-  Pressable, ScrollView, StyleSheet, Text, View
+  ActivityIndicator, Alert, Animated, FlatList, PanResponder, Platform,
+  Pressable, ScrollView, StyleSheet, Text, TextInput, View
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Picker } from '@react-native-picker/picker';
+import { Feather } from '@expo/vector-icons';
 import { Field } from '../components/Field';
 import { FloatingButton } from '../components/FloatingButton';
 import { FormModal } from '../components/FormModal';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { cancelCalendarTodoNotification, prepareNotifications, scheduleCalendarTodoNotification } from '../lib/notifications';
+import {
+  cancelAllDayPlanNotifications,
+  prepareNotifications,
+  scheduleAllDayPlanNotifications
+} from '../lib/notifications';
 import { supabase } from '../lib/supabase';
-import { CalendarTodo, RootStackParamList } from '../lib/types';
+import { DayPlan, RootStackParamList } from '../lib/types';
+import { useUndo } from '../lib/undoManager';
 import { colors } from '../theme/colors';
 import { sharedStyles } from '../theme/styles';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const PLAN_TYPES = ['Work', 'Meeting', 'Personal', 'Other'];
 
 function toIsoDate(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatTime12hr(d: Date) {
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const modifier = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12; // the hour '0' should be '12'
+  return `${String(hours).padStart(2, '0')}:${minutes} ${modifier}`;
 }
 
 function buildCalDays(year: number, month: number): (number|null)[] {
@@ -31,15 +48,52 @@ function buildCalDays(year: number, month: number): (number|null)[] {
   return cells;
 }
 
+// Swipe row for deletion
+function SwipeRow({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
+  const tx = useRef(new Animated.Value(0)).current;
+  const pan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 8 && Math.abs(g.dy) < 20,
+      onPanResponderMove: (_, g) => { if (g.dx < 0) tx.setValue(Math.max(g.dx, -80)); },
+      onPanResponderRelease: (_, g) => {
+        if (g.dx < -40) Animated.spring(tx, { toValue: -80, useNativeDriver: true }).start();
+        else Animated.spring(tx, { toValue: 0, useNativeDriver: true }).start();
+      },
+    })
+  ).current;
+
+  return (
+    <View style={{ overflow: 'hidden', borderRadius: 16, marginBottom: 10 }}>
+      <Pressable
+        onPress={() => { Animated.spring(tx, { toValue: 0, useNativeDriver: true }).start(); onDelete(); }}
+        style={styles.delBtn}
+      >
+        <Text style={styles.delBtnText}>Delete</Text>
+      </Pressable>
+      <Animated.View style={{ transform: [{ translateX: tx }] }} {...pan.panHandlers}>
+        {children}
+      </Animated.View>
+    </View>
+  );
+}
+
 export function CalendarScreen({ navigation }: NativeStackScreenProps<RootStackParamList,'Calendar'>) {
-  const [todos, setTodos] = useState<CalendarTodo[]>([]);
+  const { showUndo } = useUndo();
+  const [plans, setPlans] = useState<DayPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMonth, setViewMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(toIsoDate(new Date()));
   const [modalVisible, setModalVisible] = useState(false);
-  const [taskName, setTaskName] = useState('');
-  const [taskDate, setTaskDate] = useState(new Date());
+  
+  // Add plan form states
+  const [planTitle, setPlanTitle] = useState('');
+  const [planDetails, setPlanDetails] = useState('');
+  const [planType, setPlanType] = useState('Other');
+  const [planDate, setPlanDate] = useState(new Date());
+  const [planTime, setPlanTime] = useState(new Date());
+  
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const calPanResponder = useRef(PanResponder.create({
     onMoveShouldSetPanResponder: (_,g) => Math.abs(g.dx)>25 && Math.abs(g.dy)<30,
@@ -49,45 +103,84 @@ export function CalendarScreen({ navigation }: NativeStackScreenProps<RootStackP
     }
   })).current;
 
-  useEffect(() => { prepareNotifications(); loadTodos(); }, []);
+  useEffect(() => { prepareNotifications(); loadPlans(); }, []);
 
-  async function loadTodos() {
+  async function loadPlans() {
     setLoading(true);
-    const { data, error } = await supabase.from('calendar_todos').select('*').order('due_date', { ascending: true });
+    const { data, error } = await supabase.from('day_plans').select('*').order('plan_time', { ascending: true });
     setLoading(false);
     if (error) { Alert.alert('Error', error.message); return; }
-    setTodos(data ?? []);
+    setPlans(data ?? []);
   }
 
   const calDays = useMemo(() => buildCalDays(viewMonth.getFullYear(), viewMonth.getMonth()), [viewMonth]);
-  const datesWithTodos = useMemo(() => { const s = new Set<string>(); todos.forEach(t => s.add(t.due_date)); return s; }, [todos]);
-  const todosForSelected = useMemo(() => todos.filter(t => t.due_date === selectedDate), [todos, selectedDate]);
+  const datesWithPlans = useMemo(() => {
+    const s = new Set<string>();
+    plans.forEach(p => {
+      if (p.plan_date) {
+        s.add(p.plan_date);
+      }
+    });
+    return s;
+  }, [plans]);
+  
+  const plansForSelected = useMemo(() => plans.filter(p => p.plan_date === selectedDate), [plans, selectedDate]);
   const today = toIsoDate(new Date());
 
-  async function saveTodo() {
-    if (!taskName.trim()) { Alert.alert('Missing', 'Enter a task name.'); return; }
-    const due_date = toIsoDate(taskDate);
-    const notifId = await scheduleCalendarTodoNotification({ name: taskName.trim(), due_date });
-    const { error } = await supabase.from('calendar_todos').insert({ name: taskName.trim(), due_date, completed: false, notification_id: notifId ?? null });
-    if (error) { Alert.alert('Error', error.message); return; }
-    setTaskName(''); setTaskDate(new Date()); setModalVisible(false);
-    await loadTodos();
+  async function savePlan() {
+    if (!planTitle.trim()) { Alert.alert('Missing', 'Enter a plan title.'); return; }
+    
+    const formattedDate = toIsoDate(planDate);
+    const formattedTime = formatTime12hr(planTime);
+    
+    // Insert into DB
+    const { data, error } = await supabase.from('day_plans').insert({
+      title: planTitle.trim(),
+      plan_date: formattedDate,
+      plan_time: formattedTime,
+      details: planDetails.trim() || null,
+      plan_type: planType,
+      notification_id: null,
+      notification_early_id: null
+    }).select().single();
+    
+    if (error || !data) { Alert.alert('Error', error?.message || 'Failed to save plan'); return; }
+    
+    // Schedule local notifications
+    try {
+      await scheduleAllDayPlanNotifications(data);
+    } catch (e) {
+      console.error('Failed to schedule day plan notifications:', e);
+    }
+    
+    // Reset form
+    setPlanTitle('');
+    setPlanDetails('');
+    setPlanType('Other');
+    setPlanDate(new Date());
+    setPlanTime(new Date());
+    setModalVisible(false);
+    await loadPlans();
   }
 
-  async function toggleTodo(todo: CalendarTodo) {
-    await supabase.from('calendar_todos').update({ completed: !todo.completed }).eq('id', todo.id);
-    await loadTodos();
-  }
-
-  async function deleteTodo(todo: CalendarTodo) {
-    Alert.alert('Delete?', todo.name, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-        await cancelCalendarTodoNotification(todo.notification_id);
-        await supabase.from('calendar_todos').delete().eq('id', todo.id);
-        await loadTodos();
-      }}
-    ]);
+  async function deletePlan(plan: DayPlan) {
+    // Cancel notifications immediately
+    await cancelAllDayPlanNotifications(plan.id);
+    
+    // Optimistically remove from state
+    setPlans(prev => prev.filter(p => p.id !== plan.id));
+    
+    showUndo({
+      label: `Deleted plan: ${plan.title}`,
+      onRestore: async () => {
+        setPlans(prev => [...prev, plan].sort((a,b) => a.plan_time.localeCompare(b.plan_time)));
+        // Re-schedule notifications
+        await scheduleAllDayPlanNotifications(plan);
+      },
+      onConfirmDelete: async () => {
+        await supabase.from('day_plans').delete().eq('id', plan.id);
+      }
+    });
   }
 
   return (
@@ -115,13 +208,13 @@ export function CalendarScreen({ navigation }: NativeStackScreenProps<RootStackP
                 const iso = `${viewMonth.getFullYear()}-${String(viewMonth.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
                 const isToday = iso === today;
                 const isSel = iso === selectedDate;
-                const hasTodo = datesWithTodos.has(iso);
+                const hasPlan = datesWithPlans.has(iso);
                 return (
                   <Pressable key={iso} onPress={() => setSelectedDate(iso)} style={styles.cell}>
                     <View style={[styles.dayCircle, isSel && styles.dayCircleSel, isToday && !isSel && styles.dayCircleToday]}>
                       <Text style={[styles.dayNum, isSel && styles.dayNumSel, isToday && !isSel && styles.dayNumToday]}>{day}</Text>
                     </View>
-                    {hasTodo && <View style={[styles.dot, isSel && styles.dotSel]} />}
+                    {hasPlan && <View style={[styles.dot, isSel && styles.dotSel]} />}
                   </Pressable>
                 );
               })}
@@ -129,35 +222,114 @@ export function CalendarScreen({ navigation }: NativeStackScreenProps<RootStackP
           </View>
 
           {/* Agenda */}
-          <Text style={styles.agendaTitle}>{selectedDate === today ? "Today's To-Dos" : `To-Dos · ${selectedDate}`}</Text>
+          <Text style={styles.agendaTitle}>{selectedDate === today ? "Today's Plans" : `Plans · ${selectedDate}`}</Text>
           {loading ? <ActivityIndicator color={colors.white} style={{ marginTop:20 }} />
-            : todosForSelected.length === 0 ? <Text style={styles.empty}>No to-dos for this day.</Text>
-            : todosForSelected.map(todo => (
-              <Pressable key={todo.id} onPress={() => toggleTodo(todo)} onLongPress={() => deleteTodo(todo)}
-                style={({ pressed }) => [styles.todoCard, pressed && { opacity:0.8 }]}>
-                <View style={[styles.todoCheck, todo.completed && styles.todoCheckDone]}>
-                  {todo.completed && <Text style={styles.checkMark}>✓</Text>}
+            : plansForSelected.length === 0 ? <Text style={styles.empty}>No plans for this day.</Text>
+            : plansForSelected.map(plan => (
+              <SwipeRow key={plan.id} onDelete={() => deletePlan(plan)}>
+                <View style={styles.planCard}>
+                  <View style={styles.planHeader}>
+                    <View style={styles.planLeft}>
+                      <Feather name="calendar" size={16} color={colors.green} style={{ marginRight: 8 }} />
+                      <Text style={styles.planTimeText}>{plan.plan_time}</Text>
+                    </View>
+                    <View style={styles.typeTag}>
+                      <Text style={styles.typeTagText}>{plan.plan_type}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.planTitleText}>{plan.title}</Text>
+                  {plan.details && <Text style={styles.planDetailsText}>{plan.details}</Text>}
                 </View>
-                <Text style={[styles.todoName, todo.completed && styles.todoNameDone]}>{todo.name}</Text>
-              </Pressable>
+              </SwipeRow>
             ))
           }
         </ScrollView>
       </View>
       <FloatingButton onPress={() => setModalVisible(true)} />
-      <FormModal visible={modalVisible} title="Add To-Do" onClose={() => setModalVisible(false)}>
-        <Field label="Task Name" value={taskName} onChangeText={setTaskName} />
-        <Text style={sharedStyles.label}>Due Date</Text>
-        <Pressable onPress={() => setShowDatePicker(true)} style={styles.dateBtn}>
-          <Text style={styles.dateBtnText}>{toIsoDate(taskDate)}</Text>
-        </Pressable>
-        {showDatePicker && (
-          <DateTimePicker value={taskDate} mode="date" display={Platform.OS==='ios'?'spinner':'default'}
-            minimumDate={new Date()} onChange={(_,d) => { if (Platform.OS!=='ios') setShowDatePicker(false); if(d) setTaskDate(d); }}
-            textColor={colors.white} />
+      
+      <FormModal visible={modalVisible} title="Add Day Plan" onClose={() => setModalVisible(false)}>
+        <Field label="Plan Title" value={planTitle} onChangeText={setPlanTitle} />
+        
+        <Field label="Details / Location" value={planDetails} onChangeText={setPlanDetails} multiline numberOfLines={2} />
+        
+        <Text style={sharedStyles.label}>Plan Type</Text>
+        <View style={styles.pickerWrap}>
+          <Picker
+            selectedValue={planType}
+            onValueChange={(v) => setPlanType(v)}
+            dropdownIconColor={colors.white}
+            style={styles.picker}
+          >
+            {PLAN_TYPES.map((item) => (
+              <Picker.Item key={item} label={item} value={item} color={Platform.OS === 'ios' ? colors.white : undefined} />
+            ))}
+          </Picker>
+        </View>
+
+        <Text style={sharedStyles.label}>Plan Date</Text>
+        {Platform.OS === 'web' ? (
+          <View style={[styles.dateBtn, { marginBottom: 16 }]}>
+            {/* @ts-ignore */}
+            <input
+              type="date"
+              value={toIsoDate(planDate)}
+              onChange={(e: any) => { if (e.target.value) setPlanDate(new Date(e.target.value + 'T00:00:00')); }}
+              style={{ background: 'transparent', border: 'none', color: '#FFFFFF', fontSize: 16, fontWeight: 600, width: '100%', outline: 'none', cursor: 'pointer' }}
+            />
+          </View>
+        ) : (
+          <>
+            <Pressable onPress={() => setShowDatePicker(true)} style={styles.dateBtn}>
+              <Text style={styles.dateBtnText}>{toIsoDate(planDate)}</Text>
+            </Pressable>
+            {showDatePicker && (
+              <DateTimePicker
+                value={planDate}
+                mode="date"
+                display={Platform.OS==='ios'?'spinner':'default'}
+                minimumDate={new Date()}
+                onChange={(_,d) => { if (Platform.OS!=='ios') setShowDatePicker(false); if(d) setPlanDate(d); }}
+                textColor={colors.white}
+              />
+            )}
+          </>
         )}
-        <Pressable onPress={saveTodo} style={({ pressed }) => [styles.saveBtn, pressed && { opacity:0.85 }]}>
-          <Text style={styles.saveBtnText}>Save To-Do</Text>
+
+        <Text style={sharedStyles.label}>Plan Time</Text>
+        {Platform.OS === 'web' ? (
+          <View style={[styles.dateBtn, { marginBottom: 20 }]}>
+            {/* @ts-ignore */}
+            <input
+              type="time"
+              value={`${String(planTime.getHours()).padStart(2, '0')}:${String(planTime.getMinutes()).padStart(2, '0')}`}
+              onChange={(e: any) => {
+                if (e.target.value) {
+                  const [h, m] = e.target.value.split(':').map(Number);
+                  const t = new Date(); t.setHours(h, m, 0, 0); setPlanTime(t);
+                }
+              }}
+              style={{ background: 'transparent', border: 'none', color: '#FFFFFF', fontSize: 16, fontWeight: 600, width: '100%', outline: 'none', cursor: 'pointer' }}
+            />
+          </View>
+        ) : (
+          <>
+            <Pressable onPress={() => setShowTimePicker(true)} style={[styles.dateBtn, { marginBottom: 20 }]}>
+              <Text style={styles.dateBtnText}>{formatTime12hr(planTime)}</Text>
+            </Pressable>
+            {showTimePicker && (
+              <DateTimePicker
+                value={planTime}
+                mode="time"
+                display={Platform.OS==='ios'?'spinner':'default'}
+                onChange={(_,t) => { if (Platform.OS!=='ios') setShowTimePicker(false); if(t) setPlanTime(t); }}
+                textColor={colors.white}
+              />
+            )}
+          </>
+        )}
+
+        <Pressable onPress={savePlan} style={({ pressed }) => [styles.saveBtn, pressed && { opacity:0.85 }]}>
+          <Text style={styles.saveBtnText}>Save Plan</Text>
         </Pressable>
       </FormModal>
     </View>
@@ -183,15 +355,21 @@ const styles = StyleSheet.create({
   dot: { width:4, height:4, borderRadius:2, backgroundColor:colors.green, marginTop:2 },
   dotSel: { backgroundColor:colors.black },
   agendaTitle: { color:colors.white, fontSize:15, fontWeight:'700', marginBottom:12 },
-  todoCard: { backgroundColor:colors.card, borderRadius:16, borderWidth:1, borderColor:colors.border, padding:14, flexDirection:'row', alignItems:'center', marginBottom:10 },
-  todoCheck: { width:24, height:24, borderRadius:8, borderWidth:2, borderColor:colors.border, marginRight:12, alignItems:'center', justifyContent:'center' },
-  todoCheckDone: { backgroundColor:colors.green, borderColor:colors.green },
-  checkMark: { color:colors.white, fontSize:13, fontWeight:'700' },
-  todoName: { color:colors.white, fontSize:15, fontWeight:'600', flex:1 },
-  todoNameDone: { color:colors.muted, textDecorationLine:'line-through' },
+  planCard: { backgroundColor:colors.card, borderRadius:16, borderWidth:1, borderColor:colors.border, padding:16 },
+  planHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  planLeft: { flexDirection: 'row', alignItems: 'center' },
+  planTimeText: { color: colors.green, fontSize: 13, fontWeight: '700' },
+  typeTag: { backgroundColor: 'rgba(255, 255, 255, 0.05)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
+  typeTagText: { color: colors.white, fontSize: 11, fontWeight: '700' },
+  planTitleText: { color: colors.white, fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  planDetailsText: { color: colors.muted, fontSize: 13 },
   empty: { color:colors.muted, textAlign:'center', marginTop:20, fontSize:14 },
-  dateBtn: { minHeight:52, backgroundColor:colors.surfaceLight, borderRadius:16, borderWidth:1, borderColor:colors.border, paddingHorizontal:16, justifyContent:'center', marginBottom:20 },
+  dateBtn: { minHeight:52, backgroundColor:colors.surfaceLight, borderRadius:16, borderWidth:1, borderColor:colors.border, paddingHorizontal:16, justifyContent:'center', marginBottom:16 },
   dateBtnText: { color:colors.white, fontSize:16, fontWeight:'600' },
   saveBtn: { minHeight:56, borderRadius:16, backgroundColor:colors.green, alignItems:'center', justifyContent:'center', marginTop:8 },
-  saveBtnText: { color:colors.white, fontSize:16, fontWeight:'700' }
+  saveBtnText: { color:colors.white, fontSize:16, fontWeight:'700' },
+  delBtn: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 80, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center', borderRadius: 16 },
+  delBtnText: { color: colors.white, fontWeight: '700', fontSize: 13 },
+  pickerWrap: { borderWidth: 1, borderColor: colors.border, borderRadius: 16, marginBottom: 16, overflow: 'hidden', backgroundColor: colors.bg },
+  picker: { color: colors.white, backgroundColor: colors.bg, height: 56 }
 });

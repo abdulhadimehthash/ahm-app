@@ -35,15 +35,6 @@ export type ExpenseEntry = {
   created_at: string;
 };
 
-export type TaskEntry = {
-  id: string;
-  name: string;
-  finish_date: string;
-  notification_today_id: string | null;
-  notification_tomorrow_id: string | null;
-  created_at: string;
-};
-
 export type CalendarTodo = {
   id: string;
   name: string;
@@ -86,15 +77,6 @@ export type Reminder = {
   created_at: string;
 };
 
-export type TomorrowPrep = {
-  id: string;
-  item1: string | null;
-  item2: string | null;
-  item3: string | null;
-  date: string;
-  created_at: string;
-};
-
 export type CopyVaultItem = {
   id: string;
   label: string;
@@ -132,19 +114,13 @@ export type RootStackParamList = {
   Projects: undefined;
   Money: undefined;
   Finance: undefined;
-  Tasks: undefined;
   Calendar: undefined;
-  Daily: undefined;
   Reminders: undefined;
-  Notes: undefined;
   Documents: undefined;
-  Proposals: undefined;
   AI: undefined;
   AIChat: undefined;
   Settings: undefined;
   Search: undefined;
   CopyVault: undefined;
   Contacts: undefined;
-  Day: undefined;
-  DayDetail: { planId: string };
 };

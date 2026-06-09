@@ -28,21 +28,15 @@ import { PasswordsScreen } from './src/screens/PasswordsScreen';
 import { ProjectsScreen } from './src/screens/ProjectsScreen';
 import { MoneyScreen } from './src/screens/MoneyScreen';
 import { FinanceScreen } from './src/screens/FinanceScreen';
-import { TasksScreen } from './src/screens/TasksScreen';
 import { CalendarScreen } from './src/screens/CalendarScreen';
-import { DailyScreen } from './src/screens/DailyScreen';
 import { RemindersScreen } from './src/screens/RemindersScreen';
-import { NotesScreen } from './src/screens/NotesScreen';
 import { DocumentsScreen } from './src/screens/DocumentsScreen';
-import { ProposalsScreen } from './src/screens/ProposalsScreen';
 import { AIScreen } from './src/screens/AIScreen';
 import { AIChatScreen } from './src/screens/AIChatScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { CopyVaultScreen } from './src/screens/CopyVaultScreen';
 import { ContactsScreen } from './src/screens/ContactsScreen';
-import { DayScreen } from './src/screens/DayScreen';
-import { DayDetailScreen } from './src/screens/DayDetailScreen';
 import { colors } from './src/theme/colors';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -83,12 +77,24 @@ export default function App() {
       // Non-critical
     }
 
+    const enabledVal = await AsyncStorage.getItem('ahm_notifications_enabled');
+    const notifsEnabledSetting = enabledVal !== 'false';
+
     if (!granted) {
       Alert.alert(
         'Notifications Disabled',
         'AHM needs notification permissions to send you timely reminders for tasks, day plans, and birthdays. You can enable them anytime in system settings.',
         [{ text: 'OK' }]
       );
+      try {
+        await cancelNotification('daily_morning');
+        await cancelNotification('daily_afternoon');
+      } catch {}
+    } else if (!notifsEnabledSetting) {
+      try {
+        await cancelNotification('daily_morning');
+        await cancelNotification('daily_afternoon');
+      } catch {}
     } else {
       await scheduleDailyMorning();
       await scheduleDailyAfternoon();
@@ -114,6 +120,11 @@ export default function App() {
   }
 
   async function rescheduleAll() {
+    const enabledVal = await AsyncStorage.getItem('ahm_notifications_enabled');
+    if (enabledVal === 'false') {
+      return;
+    }
+
     const todayStr = new Date().toISOString().split('T')[0];
 
     // 1. Fetch upcoming reminders
@@ -141,17 +152,7 @@ export default function App() {
       });
     }
 
-    // 2. Fetch upcoming tasks
-    const { data: tasks } = await supabase
-      .from('tasks')
-      .select('*')
-      .gte('finish_date', todayStr);
-
-    for (const task of tasks || []) {
-      await scheduleAllTaskNotifications(task);
-    }
-
-    // 3. Fetch upcoming day plans
+    // 2. Fetch upcoming day plans
     const { data: plans } = await supabase
       .from('day_plans')
       .select('*')
@@ -161,7 +162,7 @@ export default function App() {
       await scheduleAllDayPlanNotifications(plan);
     }
 
-    // 4. Fetch birthdays
+    // 3. Fetch birthdays
     const { data: birthdays } = await supabase
       .from('birthdays')
       .select('*');
@@ -223,25 +224,19 @@ export default function App() {
             <Stack.Screen name="Projects"  component={ProjectsScreen} />
             <Stack.Screen name="Money"     component={MoneyScreen} />
             <Stack.Screen name="Finance"   component={FinanceScreen} />
-            <Stack.Screen name="Tasks"     component={TasksScreen} />
             <Stack.Screen name="Calendar"  component={CalendarScreen} />
-            <Stack.Screen name="Daily"     component={DailyScreen} />
             <Stack.Screen name="Reminders" component={RemindersScreen} />
-            <Stack.Screen name="Notes"     component={NotesScreen} />
             <Stack.Screen name="Documents"  component={DocumentsScreen} />
-            <Stack.Screen name="Proposals"  component={ProposalsScreen} />
             <Stack.Screen name="AI"         component={AIScreen} />
             <Stack.Screen name="AIChat"     component={AIChatScreen} />
             <Stack.Screen name="Settings"   component={SettingsScreen} />
             <Stack.Screen name="Search"    component={SearchScreen} />
             <Stack.Screen name="CopyVault" component={CopyVaultScreen} />
             <Stack.Screen name="Contacts"  component={ContactsScreen} />
-            <Stack.Screen name="Day"       component={DayScreen} />
-            <Stack.Screen name="DayDetail" component={DayDetailScreen} />
           </Stack.Navigator>
         </NavigationContainer>
         {/* Global undo toast — renders above all screens */}
-        {/* Removed UndoToast */}
+        <UndoToast />
       </View>
     </UndoProvider>
   );

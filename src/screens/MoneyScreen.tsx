@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View, Platform } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
+import { ActivityIndicator, Alert, Animated, FlatList, PanResponder, Pressable, StyleSheet, Text, View, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Field } from '../components/Field';
 import { FloatingButton } from '../components/FloatingButton';
@@ -11,16 +10,48 @@ import { supabase } from '../lib/supabase';
 import { FinanceCategory, FinanceEntry, RootStackParamList } from '../lib/types';
 import { colors } from '../theme/colors';
 import { sharedStyles } from '../theme/styles';
+import { useUndo } from '../lib/undoManager';
 
 const categories: FinanceCategory[] = ['Client', 'Others'];
 
+// Swipe row for deletion
+function SwipeRow({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
+  const tx = useRef(new Animated.Value(0)).current;
+  const pan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 8 && Math.abs(g.dy) < 20,
+      onPanResponderMove: (_, g) => { if (g.dx < 0) tx.setValue(Math.max(g.dx, -80)); },
+      onPanResponderRelease: (_, g) => {
+        if (g.dx < -40) Animated.spring(tx, { toValue: -80, useNativeDriver: true }).start();
+        else Animated.spring(tx, { toValue: 0, useNativeDriver: true }).start();
+      },
+    })
+  ).current;
+
+  return (
+    <View style={{ overflow: 'hidden', borderRadius: 16, marginBottom: 10 }}>
+      <Pressable
+        onPress={() => { Animated.spring(tx, { toValue: 0, useNativeDriver: true }).start(); onDelete(); }}
+        style={styles.delBtn}
+      >
+        <Text style={styles.delBtnText}>Delete</Text>
+      </Pressable>
+      <Animated.View style={{ transform: [{ translateX: tx }] }} {...pan.panHandlers}>
+        {children}
+      </Animated.View>
+    </View>
+  );
+}
+
 export function MoneyScreen({ navigation }: NativeStackScreenProps<RootStackParamList, 'Money'>) {
+  const { showUndo } = useUndo();
   const [entries, setEntries] = useState<FinanceEntry[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [name, setName] = useState('');
   const [category, setCategory] = useState<FinanceCategory>('Client');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const total = useMemo(() => entries.reduce((sum, e) => sum + e.amount, 0), [entries]);
 
@@ -42,6 +73,12 @@ export function MoneyScreen({ navigation }: NativeStackScreenProps<RootStackPara
     setEntries((data ?? []).map((item) => ({ ...item, amount: Number(item.amount) })));
   }
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadEntries();
+    setRefreshing(false);
+  }, []);
+
   async function saveEntry() {
     const numericAmount = Number(amount);
     if (!name.trim() || Number.isNaN(numericAmount) || numericAmount < 0) {
@@ -62,6 +99,17 @@ export function MoneyScreen({ navigation }: NativeStackScreenProps<RootStackPara
     setCategory('Client');
     setModalVisible(false);
     await loadEntries();
+  }
+
+  function handleDelete(item: FinanceEntry) {
+    setEntries((prev) => prev.filter((e) => e.id !== item.id));
+    showUndo({
+      label: `Deleted: ${item.name}`,
+      onRestore: async () => setEntries((prev) => [item, ...prev]),
+      onConfirmDelete: async () => {
+        await supabase.from('finance_entries').delete().eq('id', item.id);
+      },
+    });
   }
 
   return (
@@ -87,6 +135,8 @@ export function MoneyScreen({ navigation }: NativeStackScreenProps<RootStackPara
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyIcon}>💰</Text>
@@ -95,41 +145,21 @@ export function MoneyScreen({ navigation }: NativeStackScreenProps<RootStackPara
               </View>
             }
             renderItem={({ item }) => (
-              <Pressable
-                onLongPress={() => {
-                  Alert.alert('Delete Entry', `Delete "${item.name}"?`, [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Delete',
-                      style: 'destructive',
-                      onPress: async () => {
-                        const { error } = await supabase
-                          .from('finance_entries')
-                          .delete()
-                          .eq('id', item.id);
-                        if (error) Alert.alert('Error', error.message);
-                        else await loadEntries();
-                      }
-                    }
-                  ]);
-                }}
-                style={({ pressed }) => [
-                  styles.card,
-                  pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] }
-                ]}
-              >
-                <View style={styles.cardRow}>
-                  <View style={styles.cardLeft}>
-                    <Text style={styles.cardName}>{item.name}</Text>
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{item.category}</Text>
+              <SwipeRow onDelete={() => handleDelete(item)}>
+                <View style={styles.card}>
+                  <View style={styles.cardRow}>
+                    <View style={styles.cardLeft}>
+                      <Text style={styles.cardName}>{item.name}</Text>
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{item.category}</Text>
+                      </View>
                     </View>
+                    <Text style={styles.cardAmount}>
+                      ₹{item.amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </Text>
                   </View>
-                  <Text style={styles.cardAmount}>
-                    ₹{item.amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                  </Text>
                 </View>
-              </Pressable>
+              </SwipeRow>
             )}
           />
         )}
@@ -208,7 +238,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: 18,
-    marginBottom: 12
   },
   cardRow: {
     flexDirection: 'row',
@@ -261,5 +290,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     backgroundColor: colors.surfaceLight,
     height: 56
-  }
+  },
+  delBtn: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 80, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center', borderRadius: 16 },
+  delBtnText: { color: colors.white, fontWeight: '700', fontSize: 13 }
 });
